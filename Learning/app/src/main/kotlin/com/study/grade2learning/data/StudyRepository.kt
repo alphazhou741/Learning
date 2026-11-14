@@ -120,6 +120,9 @@ class StudyRepository(context: Context) {
     }
 
     private val authPrefs = appContext.getSharedPreferences("grade2_auth_prefs", Context.MODE_PRIVATE)
+    private val devicePrefs = appContext.getSharedPreferences("grade2_device_prefs", Context.MODE_PRIVATE)
+
+    fun hasLoggedInBefore(): Boolean = devicePrefs.getBoolean(KEY_HAS_LOGGED_IN_BEFORE, false)
 
     fun loadAuthSession(): AuthSession? {
         val token = authPrefs.getString(KEY_AUTH_TOKEN, null)?.takeIf { it.isNotBlank() } ?: return null
@@ -147,6 +150,7 @@ class StudyRepository(context: Context) {
             .putString(KEY_AUTH_CHILDREN, encodeChildren(session.children))
             .putString(KEY_AUTH_ACTIVE_CHILD_ID, session.activeChildId)
             .apply()
+        devicePrefs.edit().putBoolean(KEY_HAS_LOGGED_IN_BEFORE, true).apply()
     }
 
     fun clearAllLocalState() {
@@ -496,6 +500,7 @@ class StudyRepository(context: Context) {
     }
 
     companion object {
+        private const val KEY_HAS_LOGGED_IN_BEFORE = "has_logged_in_before"
         private const val KEY_AUTH_TOKEN = "auth_token"
         private const val KEY_AUTH_USER_ID = "auth_user_id"
         private const val KEY_AUTH_USERNAME = "auth_username"

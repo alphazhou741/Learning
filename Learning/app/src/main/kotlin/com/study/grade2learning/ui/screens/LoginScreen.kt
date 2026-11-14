@@ -51,13 +51,14 @@ import com.study.grade2learning.ui.theme.AppColors
 
 @Composable
 fun LoginScreen(
+    initialRegisterMode: Boolean,
     isLoading: Boolean,
     errorMessage: String,
     onLogin: (username: String, password: String) -> Unit,
     onRegister: (username: String, password: String, childName: String, childGrade: String) -> Unit,
     onClearError: () -> Unit
 ) {
-    var isRegisterMode by remember { mutableStateOf(false) }
+    var isRegisterMode by remember(initialRegisterMode) { mutableStateOf(initialRegisterMode) }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }

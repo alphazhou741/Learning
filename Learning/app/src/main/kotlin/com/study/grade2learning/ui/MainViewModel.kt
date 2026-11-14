@@ -50,6 +50,7 @@ enum class AppScreen {
 data class UiState(
     val isLoading: Boolean = true,
     val isLoggedIn: Boolean = false,
+    val preferRegisterTab: Boolean = true,
     val username: String = "",
     val children: List<ChildSummary> = emptyList(),
     val activeChildId: String = "",
@@ -109,10 +110,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val session = withContext(Dispatchers.IO) { repo.loadAuthSession() }
 
             if (session == null) {
+                val firstInstall = withContext(Dispatchers.IO) { !repo.hasLoggedInBefore() }
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         isLoggedIn = false,
+                        preferRegisterTab = firstInstall,
                         bundle = bundle,
                         selectedDate = LocalDate.now().toString()
                     )
@@ -232,6 +235,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun logout() {
         audioPlayer.stopPlayback()
+        val firstInstall = !repo.hasLoggedInBefore()
         viewModelScope.launch(Dispatchers.IO) {
             repo.clearAllLocalState()
         }
@@ -239,6 +243,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             UiState(
                 isLoading = false,
                 isLoggedIn = false,
+                preferRegisterTab = firstInstall,
                 bundle = st.bundle,
                 selectedDate = LocalDate.now().toString()
             )
@@ -1035,6 +1040,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             UiState(
                                 isLoading = false,
                                 isLoggedIn = false,
+                                preferRegisterTab = false,
                                 authError = "登录凭证已过期，请重新登录",
                                 bundle = cur.bundle,
                                 selectedDate = LocalDate.now().toString()

@@ -80,6 +80,7 @@ fun LearningTabletApp(viewModel: MainViewModel = viewModel()) {
             }
         } else if (!state.isLoggedIn) {
             LoginScreen(
+                initialRegisterMode = state.preferRegisterTab,
                 isLoading = state.authLoading,
                 errorMessage = state.authError,
                 onLogin = viewModel::login,
