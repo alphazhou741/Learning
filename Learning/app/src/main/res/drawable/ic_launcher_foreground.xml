@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Soft rounded card backing inside safe zone (24..84) -->
+    <path
+        android:fillColor="#F4F1E8"
+        android:pathData="M34,26h40c4.4,0 8,3.6 8,8v40c0,4.4 -3.6,8 -8,8h-40c-4.4,0 -8,-3.6 -8,-8v-40c0,-4.4 3.6,-8 8,-8z" />
+    <!-- Open Book Left Page -->
+    <path
+        android:fillColor="#FBF9F3"
+        android:strokeColor="#355C7D"
+        android:strokeWidth="2.4"
+        android:strokeLineJoin="round"
+        android:pathData="M54,38c-5,-3 -13,-3 -18,-1v27c5,-2 13,-2 18,1z" />
+    <!-- Open Book Right Page -->
+    <path
+        android:fillColor="#EFECE2"
+        android:strokeColor="#355C7D"
+        android:strokeWidth="2.4"
+        android:strokeLineJoin="round"
+        android:pathData="M54,38c5,-3 13,-3 18,-1v27c-5,-2 -13,-2 -18,1z" />
+    <!-- Left page reading lines (Warm Amber) -->
+    <path
+        android:strokeColor="#B87D3B"
+        android:strokeWidth="2.2"
+        android:strokeLineCap="round"
+        android:pathData="M41,45h8M41,51h8M41,57h6" />
+    <!-- Right page math plus & check (Sage Green) -->
+    <path
+        android:strokeColor="#4E8A6E"
+        android:strokeWidth="2.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M60,46h6M63,43v6M59,56l2.5,2.5l5,-5" />
+    <!-- Bottom accent bar -->
+    <path
+        android:strokeColor="#4E7FA8"
+        android:strokeWidth="3.0"
+        android:strokeLineCap="round"
+        android:pathData="M40,72h28" />
+</vector>

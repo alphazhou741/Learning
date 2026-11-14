@@ -1,0 +1,42 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: study_postgres
+    restart: unless-stopped
+    network_mode: host
+    command: ["postgres", "-c", "listen_addresses=127.0.0.1", "-p", "5433"]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-study_learning}
+      POSTGRES_USER: ${POSTGRES_USER:-study}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_strong_password}
+    volumes:
+      - study_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5433 -U ${POSTGRES_USER:-study} -d ${POSTGRES_DB:-study_learning}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      network: host
+    container_name: study_api
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-study}:${POSTGRES_PASSWORD:-change_me_strong_password}@127.0.0.1:5433/${POSTGRES_DB:-study_learning}
+      JWT_SECRET: ${JWT_SECRET:-replace_with_64_char_random_hex_secret}
+      JWT_EXPIRE_DAYS: ${JWT_EXPIRE_DAYS:-90}
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8780/healthz', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  study_pg_data:

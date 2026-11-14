@@ -1,0 +1,21 @@
+.DS_Store
+cn-math-taxonomy/
+
+# Backend secrets & local runtime artifacts
+server/.env
+server/.venv/
+server/.pytest_cache/
+**/__pycache__/
+*.py[cod]
+*.db
+*.sqlite
+*.sqlite3
+
+# Android build & local environment artifacts
+Learning/.gradle/
+Learning/build/
+Learning/app/build/
+Learning/.kotlin/
+Learning/.idea/
+Learning/local.properties
+*.iml
