@@ -116,7 +116,7 @@ fun LoginScreen(
                             fontWeight = FontWeight.ExtraBold
                         )
                         Text(
-                            text = "二年级数学 · 语文 · 英语知识溯源平板端",
+                            text = "小学 1–3 年级数学 · 语文 · 英语知识溯源平板端",
                             color = AppColors.TextMuted,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold
@@ -138,7 +138,7 @@ fun LoginScreen(
                         bg = AppColors.MathBadgeBg,
                         border = AppColors.MathBorder,
                         title = "知识图谱溯源",
-                        subtitle = "覆盖二年级三科知识点，错题自动回溯一年级前置基础"
+                        subtitle = "覆盖苏教数学、人教语文 1–3 年级与 PEP 英语，错题自动回溯前置基础"
                     )
                     FeatureRow(
                         icon = AppIcons.Pulse,

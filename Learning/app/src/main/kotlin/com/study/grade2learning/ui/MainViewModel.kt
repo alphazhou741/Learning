@@ -97,6 +97,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val cloud = CloudApiClient()
     private val audioPlayer = EnglishAudioPlayer(application)
     private val engines = mutableMapOf<SubjectKey, DiagEngine>()
+    private var fullBundle: Grade2Bundle? = null
     private val queueLock = Any()
     private val syncMutex = Mutex()
 
@@ -106,17 +107,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     init {
         viewModelScope.launch {
             val bundle = withContext(Dispatchers.IO) { repo.loadBundle() }
-            bundle.subjects.forEach { (k, ds) -> engines[k] = DiagEngine(ds) }
+            fullBundle = bundle
             val session = withContext(Dispatchers.IO) { repo.loadAuthSession() }
 
             if (session == null) {
                 val firstInstall = withContext(Dispatchers.IO) { !repo.hasLoggedInBefore() }
+                val scoped = rebuildScopedBundle("二年级")
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         isLoggedIn = false,
                         preferRegisterTab = firstInstall,
-                        bundle = bundle,
+                        bundle = scoped,
                         selectedDate = LocalDate.now().toString()
                     )
                 }
@@ -127,10 +129,47 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun rebuildScopedBundle(gradeLabel: String): Grade2Bundle? {
+        val raw = fullBundle ?: return null
+        val targetGrade = when {
+            gradeLabel.contains("一") -> 1
+            gradeLabel.contains("三") -> 3
+            else -> 2
+        }
+        val scopedSubjects = raw.subjects.mapValues { (subjectKey, ds) ->
+            if (subjectKey == SubjectKey.ENGLISH) {
+                ds
+            } else {
+                val scopedTopics = ds.topics
+                    .filter { it.grade <= targetGrade }
+                    .map { it.copy(isTarget = (it.grade == targetGrade)) }
+                val allowedIds = scopedTopics.mapTo(HashSet()) { it.id }
+                val prefix = if (subjectKey == SubjectKey.MATH) "苏教版" else "人教版"
+                ds.copy(
+                    edition = "$prefix$gradeLabel",
+                    targetCount = scopedTopics.count { it.isTarget },
+                    prerequisiteCount = scopedTopics.count { !it.isTarget },
+                    topics = scopedTopics,
+                    dependencies = ds.dependencies.filter {
+                        it.topicId in allowedIds && it.prerequisiteId in allowedIds
+                    },
+                    questions = ds.questions.filter { it.topicId in allowedIds }
+                )
+            }
+        }
+        val scopedBundle = raw.copy(subjects = scopedSubjects)
+        scopedBundle.subjects.forEach { (k, ds) -> engines[k] = DiagEngine(ds) }
+        return scopedBundle
+    }
+
     private fun hydrateFromLocalCache(session: AuthSession, bundle: Grade2Bundle?) {
+        if (bundle != null) {
+            fullBundle = bundle
+        }
         val activeChild = session.children.firstOrNull { it.id == session.activeChildId } ?: session.children.first()
         val cid = activeChild.id
         val profile = repo.loadProfile(cid, activeChild.toUserProfile())
+        val scopedBundle = rebuildScopedBundle(profile.grade)
         val settings = repo.loadParentSettings(cid, activeChild.toParentSettings())
         val resetVer = repo.loadResetVersion(cid, activeChild.resetVersion)
         val records = repo.loadRecords(cid)
@@ -150,7 +189,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 pendingSyncCount = pendingCount,
                 authLoading = false,
                 authError = "",
-                bundle = bundle ?: it.bundle,
+                bundle = scopedBundle ?: it.bundle,
                 profile = profile,
                 term = profile.defaultTerm,
                 parentSettings = settings,
@@ -390,8 +429,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 updatedAtMs = now
             )
         )
+        val gradeChanged = _uiState.value.profile.grade != grade
+        val scopedBundle = if (gradeChanged) rebuildScopedBundle(grade) else null
         _uiState.update {
             it.copy(
+                bundle = scopedBundle ?: it.bundle,
                 profile = updated,
                 children = it.children.map { child ->
                     if (child.id == childId) {
@@ -406,6 +448,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 },
                 term = defaultTerm,
                 selectedUnitIdx = 0,
+                sessionTopics = if (gradeChanged) emptyList() else it.sessionTopics,
+                currentQuestion = if (gradeChanged) null else it.currentQuestion,
                 showProfileDialog = false
             )
         }
@@ -842,8 +886,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val freshChild = res.snapshot.child
                     val freshProfile = freshChild.toUserProfile()
                     val freshSettings = freshChild.toParentSettings()
+                    val freshBundle = rebuildScopedBundle(freshProfile.grade)
                     _uiState.update { cur ->
                         cur.copy(
+                            bundle = freshBundle ?: cur.bundle,
                             resetInProgress = false,
                             resetError = "",
                             children = updatedChildren,
@@ -965,8 +1011,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 repo.saveAuthSession(session)
                                 if (_uiState.value.activeChildId == cid) {
                                     val freshProfile = res.snapshot.child.toUserProfile()
+                                    val scoped = rebuildScopedBundle(freshProfile.grade)
                                     _uiState.update { cur ->
                                         cur.copy(
+                                            bundle = scoped ?: cur.bundle,
                                             children = updatedChildren,
                                             resetVersion = res.snapshot.child.resetVersion,
                                             profile = freshProfile,
@@ -1016,8 +1064,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                         if (!shouldContinue && _uiState.value.activeChildId == cid) {
                             val syncedProfile = res.snapshot.child.toUserProfile()
+                            val scoped = rebuildScopedBundle(syncedProfile.grade)
                             _uiState.update { cur ->
                                 cur.copy(
+                                    bundle = scoped ?: cur.bundle,
                                     children = updatedChildren,
                                     resetVersion = res.snapshot.child.resetVersion,
                                     profile = syncedProfile,

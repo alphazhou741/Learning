@@ -72,7 +72,7 @@ fun LearningTabletApp(viewModel: MainViewModel = viewModel()) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "正在加载二年级语数英离线知识图谱...",
+                    text = "正在加载语数英知识图谱...",
                     color = AppColors.TextSecondary,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold

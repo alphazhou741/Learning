@@ -268,14 +268,16 @@ fun ParentScreen(
                         val mathDs = bundle?.subjects?.get(SubjectKey.MATH)
                         val zhDs = bundle?.subjects?.get(SubjectKey.CHINESE)
                         val enDs = bundle?.subjects?.get(SubjectKey.ENGLISH)
+                        val mathPrereqHint = if ((mathDs?.prerequisiteCount ?: 0) > 0) "（含前置先修）" else ""
+                        val zhPrereqHint = if ((zhDs?.prerequisiteCount ?: 0) > 0) "（含前置先修）" else ""
                         CoverageRow(
-                            "苏教版二年级数学（+一年级先修）",
-                            "${mathDs?.targetCount ?: 43} + ${mathDs?.prerequisiteCount ?: 32} 点",
+                            "苏教版${state.profile.grade}数学$mathPrereqHint",
+                            "${mathDs?.targetCount ?: 0} + ${mathDs?.prerequisiteCount ?: 0} 点",
                             AppColors.MathTextDark
                         )
                         CoverageRow(
-                            "人教版二年级语文（+一年级先修）",
-                            "${zhDs?.targetCount ?: 79} + ${zhDs?.prerequisiteCount ?: 79} 点",
+                            "人教版${state.profile.grade}语文$zhPrereqHint",
+                            "${zhDs?.targetCount ?: 0} + ${zhDs?.prerequisiteCount ?: 0} 点",
                             AppColors.ZhTextDark
                         )
                         CoverageRow(
@@ -395,7 +397,7 @@ fun ParentScreen(
                             RuleOptionCard(
                                 modifier = Modifier.weight(1f),
                                 title = "连续答对 2 题（推荐）",
-                                subtitle = "轻量紧凑，适合二年级日常复习",
+                                subtitle = "轻量紧凑，适合日常稳步巩固复习",
                                 selected = streak2,
                                 selectedBg = AppColors.MathBadgeBg,
                                 selectedBorder = AppColors.MathProgress,
