@@ -18,4 +18,8 @@ Learning/app/build/
 Learning/.kotlin/
 Learning/.idea/
 Learning/local.properties
+Learning/keystore.properties
+*.jks
+*.keystore
+*.p12
 *.iml

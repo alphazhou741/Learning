@@ -1,8 +1,37 @@
+import java.util.Properties
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.compose.compiler)
   alias(libs.plugins.kotlin.serialization)
 }
+
+val keystorePropsFile = rootProject.file("keystore.properties")
+val keystoreProps = Properties().apply {
+  if (keystorePropsFile.exists()) {
+    keystorePropsFile.inputStream().use { load(it) }
+  }
+}
+
+val releaseStoreFilePath: String? =
+  System.getenv("RELEASE_STORE_FILE")?.takeIf { it.isNotBlank() }
+    ?: keystoreProps.getProperty("storeFile")?.takeIf { it.isNotBlank() }
+val releaseStorePassword: String? =
+  System.getenv("RELEASE_STORE_PASSWORD")?.takeIf { it.isNotBlank() }
+    ?: keystoreProps.getProperty("storePassword")?.takeIf { it.isNotBlank() }
+val releaseKeyAlias: String? =
+  System.getenv("RELEASE_KEY_ALIAS")?.takeIf { it.isNotBlank() }
+    ?: keystoreProps.getProperty("keyAlias")?.takeIf { it.isNotBlank() }
+val releaseKeyPassword: String? =
+  System.getenv("RELEASE_KEY_PASSWORD")?.takeIf { it.isNotBlank() }
+    ?: keystoreProps.getProperty("keyPassword")?.takeIf { it.isNotBlank() }
+
+val hasReleaseSigning =
+  !releaseStoreFilePath.isNullOrBlank() &&
+    file(releaseStoreFilePath).exists() &&
+    !releaseStorePassword.isNullOrBlank() &&
+    !releaseKeyAlias.isNullOrBlank() &&
+    !releaseKeyPassword.isNullOrBlank()
 
 android {
   namespace = "com.study.grade2learning"
@@ -11,14 +40,28 @@ android {
     applicationId = "com.study.grade2learning"
     minSdk = 35
     targetSdk = 36
-    versionCode = 1
-    versionName = "1.0"
+    versionCode = providers.gradleProperty("appVersionCode").orNull?.toIntOrNull() ?: 2
+    versionName = providers.gradleProperty("appVersionName").orNull ?: "1.1.0"
     buildConfigField("String", "API_BASE_URL", "\"https://study.19930216.xyz\"")
+  }
+
+  signingConfigs {
+    if (hasReleaseSigning) {
+      create("release") {
+        storeFile = file(releaseStoreFilePath!!)
+        storePassword = releaseStorePassword
+        keyAlias = releaseKeyAlias
+        keyPassword = releaseKeyPassword
+      }
+    }
   }
 
   buildTypes {
     release {
       isMinifyEnabled = false
+      if (hasReleaseSigning) {
+        signingConfig = signingConfigs.getByName("release")
+      }
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
     }
   }
