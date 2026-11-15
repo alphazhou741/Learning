@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -46,6 +47,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.study.grade2learning.ui.icons.AppIcons
 import com.study.grade2learning.ui.theme.AppColors
 
@@ -54,8 +56,13 @@ fun LoginScreen(
     initialRegisterMode: Boolean,
     isLoading: Boolean,
     errorMessage: String,
+    recoveryLoading: Boolean,
+    recoveryError: String,
+    recoverySuccessCode: String?,
     onLogin: (username: String, password: String) -> Unit,
     onRegister: (username: String, password: String, childName: String, childGrade: String) -> Unit,
+    onResetByRecovery: (username: String, recoveryCode: String, newPassword: String) -> Unit,
+    onClearRecoveryState: () -> Unit,
     onClearError: () -> Unit
 ) {
     var isRegisterMode by remember(initialRegisterMode) { mutableStateOf(initialRegisterMode) }
@@ -64,6 +71,10 @@ fun LoginScreen(
     var showPassword by remember { mutableStateOf(false) }
     var childName by remember { mutableStateOf("小宇") }
     var childGrade by remember { mutableStateOf("二年级") }
+    var showRecoveryDialog by remember { mutableStateOf(false) }
+    var recUsername by remember { mutableStateOf("") }
+    var recCode by remember { mutableStateOf("") }
+    var recNewPassword by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
 
     Box(
@@ -355,11 +366,189 @@ fun LoginScreen(
                     }
                 }
 
+                if (!isRegisterMode) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "忘记密码？使用恢复码重置",
+                            color = AppColors.MathPrimary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.clickable {
+                                recUsername = username
+                                recCode = ""
+                                recNewPassword = ""
+                                onClearRecoveryState()
+                                showRecoveryDialog = true
+                            }
+                        )
+                        Text(
+                            text = "study.19930216.xyz",
+                            color = AppColors.TextMuted,
+                            fontSize = 11.sp
+                        )
+                    }
+                } else {
+                    Text(
+                        text = "注册后系统会生成 12 位账号恢复码，可用于忘记密码时自助找回",
+                        color = AppColors.TextMuted,
+                        fontSize = 11.sp
+                    )
+                }
+            }
+        }
+    }
+
+    if (showRecoveryDialog) {
+        Dialog(onDismissRequest = {
+            if (!recoveryLoading) {
+                showRecoveryDialog = false
+                onClearRecoveryState()
+            }
+        }) {
+            Column(
+                modifier = Modifier
+                    .width(460.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(AppColors.CardSurface)
+                    .border(1.dp, AppColors.BorderWarm, RoundedCornerShape(24.dp))
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
                 Text(
-                    text = "数据安全加密保存于 study.19930216.xyz 云端服务器",
-                    color = AppColors.TextMuted,
-                    fontSize = 11.sp
+                    text = "通过恢复码重置密码",
+                    color = AppColors.TextPrimary,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.ExtraBold
                 )
+                Text(
+                    text = "请输入用户名及注册时保存的 12 位恢复码（如 XXXX-XXXX-XXXX）。若恢复码遗失，可联系管理员在后台重置密码。",
+                    color = AppColors.TextSecondary,
+                    fontSize = 12.sp,
+                    lineHeight = 18.sp
+                )
+
+                if (recoverySuccessCode != null) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(AppColors.EnBadgeBg)
+                            .border(1.dp, AppColors.EnBorder, RoundedCornerShape(14.dp))
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "密码重置成功！旧恢复码已作废，请保存新的恢复码：",
+                            color = AppColors.EnTextDark,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = recoverySuccessCode,
+                            color = AppColors.TextPrimary,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(42.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(AppColors.MathPrimary)
+                            .clickable {
+                                username = recUsername
+                                showRecoveryDialog = false
+                                onClearRecoveryState()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "我已保存，返回登录",
+                            color = AppColors.TextOnAccent,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                } else {
+                    LabeledInputField(
+                        label = "家庭账号用户名",
+                        value = recUsername,
+                        placeholder = "请输入用户名",
+                        onValueChange = { recUsername = it }
+                    )
+                    LabeledInputField(
+                        label = "12 位账号恢复码",
+                        value = recCode,
+                        placeholder = "例如 ABCD-EFGH-2345",
+                        onValueChange = { recCode = it.uppercase() }
+                    )
+                    LabeledInputField(
+                        label = "设置新密码（至少 6 位）",
+                        value = recNewPassword,
+                        placeholder = "请输入至少 6 位新密码",
+                        isPassword = true,
+                        onValueChange = { recNewPassword = it }
+                    )
+
+                    if (recoveryError.isNotBlank()) {
+                        Text(
+                            text = recoveryError,
+                            color = AppColors.WeakTextDark,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .height(40.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(AppColors.PillMutedBg)
+                                .clickable(enabled = !recoveryLoading) {
+                                    showRecoveryDialog = false
+                                    onClearRecoveryState()
+                                }
+                                .padding(horizontal = 16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "取消",
+                                color = AppColors.TextSecondary,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .height(40.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (recoveryLoading) AppColors.MathPrimary.copy(alpha = 0.65f) else AppColors.MathPrimary)
+                                .clickable(enabled = !recoveryLoading) {
+                                    onResetByRecovery(recUsername, recCode, recNewPassword)
+                                }
+                                .padding(horizontal = 18.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (recoveryLoading) "重置中..." else "确认重置密码",
+                                color = AppColors.TextOnAccent,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
+                    }
+                }
             }
         }
     }

@@ -1,0 +1,1541 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>基础学习 · 全局管理后台</title>
+  <style>
+    :root {
+      --bg-paper: #F6F2E9;
+      --bg-sub: #EFE9DC;
+      --bg-card: #FCF9F2;
+      --bg-card-alt: #F9F5EB;
+      --border: #DFD7C8;
+      --border-strong: #C9BEA9;
+      --text: #1E242B;
+      --text-secondary: #4D5560;
+      --text-muted: #767E88;
+      --math: #2E6DA4;
+      --math-bg: #E7F0F8;
+      --zh: #B7791F;
+      --zh-bg: #FAF0DD;
+      --en: #2F855A;
+      --en-bg: #E6F3EC;
+      --weak: #B84A39;
+      --weak-bg: #FBE9E7;
+      --shadow: 0 8px 24px rgba(30, 36, 43, 0.06);
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", "Segoe UI", sans-serif;
+      background: var(--bg-paper);
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input, select { font-family: inherit; }
+
+    .hidden { display: none !important; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+    /* Auth Gate Layout */
+    .auth-shell {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 28px 20px;
+    }
+    .auth-grid {
+      width: 100%;
+      max-width: 960px;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 24px;
+    }
+    @media (max-width: 820px) {
+      .auth-grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+    .card-soft {
+      background: var(--bg-card-alt);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .brand-badge {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--math-bg);
+      border: 1px solid #C6D9EC;
+      color: var(--math);
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 18px;
+    }
+    h1, h2, h3, p { margin: 0; }
+    .subtext { color: var(--text-muted); font-size: 13px; }
+
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    .input, .select {
+      width: 100%;
+      height: 40px;
+      padding: 0 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-paper);
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+    }
+    .input:focus, .select:focus {
+      border-color: var(--math);
+      box-shadow: 0 0 0 3px rgba(46, 109, 164, 0.14);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      height: 38px;
+      padding: 0 15px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s ease, transform 0.08s ease;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .btn-primary { background: var(--math); color: #F7F5F0; }
+    .btn-secondary { background: var(--bg-sub); color: var(--text); border-color: var(--border-strong); }
+    .btn-zh { background: var(--zh); color: #F7F5F0; }
+    .btn-en { background: var(--en); color: #F7F5F0; }
+    .btn-danger { background: var(--weak); color: #F7F5F0; }
+    .btn-danger-soft { background: var(--weak-bg); color: var(--weak); border-color: #E7B7AF; }
+    .btn-sm { height: 32px; padding: 0 11px; font-size: 12px; border-radius: 8px; }
+    .btn-block { width: 100%; }
+
+    .alert {
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .alert-err { background: var(--weak-bg); color: var(--weak); border: 1px solid #E7B7AF; }
+    .alert-ok { background: var(--en-bg); color: var(--en); border: 1px solid #B7DEC9; }
+    .alert-warn { background: var(--zh-bg); color: #8A5810; border: 1px solid #E7CF9D; }
+
+    /* Top Header */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(246, 242, 233, 0.94);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .topbar-left, .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .main-wrap {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 20px 24px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* KPI Strip */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+    @media (max-width: 960px) {
+      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 560px) {
+      .kpi-grid { grid-template-columns: 1fr; }
+    }
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 18px;
+    }
+    .kpi-label { font-size: 12px; font-weight: 700; color: var(--text-muted); }
+    .kpi-value { font-size: 28px; font-weight: 800; margin: 4px 0; letter-spacing: -0.5px; }
+    .kpi-sub { font-size: 12px; color: var(--text-secondary); }
+
+    /* Middle Overview Grid */
+    .mid-grid {
+      display: grid;
+      grid-template-columns: 1.35fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 980px) {
+      .mid-grid { grid-template-columns: 1fr; }
+    }
+
+    .chart-bars {
+      display: grid;
+      grid-template-columns: repeat(14, minmax(0, 1fr));
+      gap: 8px;
+      align-items: end;
+      height: 146px;
+      padding-top: 14px;
+    }
+    .bar-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      height: 100%;
+      justify-content: flex-end;
+    }
+    .bar-stack {
+      width: 100%;
+      max-width: 24px;
+      min-height: 4px;
+      border-radius: 6px 6px 2px 2px;
+      background: var(--bg-sub);
+      display: flex;
+      flex-direction: column-reverse;
+      overflow: hidden;
+    }
+    .bar-math { background: var(--math); }
+    .bar-zh { background: var(--zh); }
+    .bar-en { background: var(--en); }
+    .bar-day { font-size: 10px; color: var(--text-muted); }
+
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 10px;
+    }
+    .dot {
+      display: inline-block;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      margin-right: 4px;
+    }
+
+    .grade-pills {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin: 10px 0 14px;
+    }
+    .grade-pill {
+      background: var(--bg-paper);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+    }
+    .grade-pill strong { display: block; font-size: 18px; }
+    .grade-pill span { font-size: 12px; color: var(--text-muted); }
+
+    .audit-mini-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 165px;
+      overflow-y: auto;
+    }
+    .audit-item {
+      background: var(--bg-paper);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 12px;
+    }
+    .audit-meta {
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-muted);
+      font-size: 11px;
+      margin-bottom: 2px;
+    }
+
+    /* Filter & Table */
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .toolbar .input { max-width: 280px; }
+    .toolbar .select { width: auto; min-width: 125px; }
+
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th {
+      text-align: left;
+      padding: 10px 12px;
+      color: var(--text-muted);
+      font-size: 12px;
+      border-bottom: 1px solid var(--border-strong);
+      white-space: nowrap;
+    }
+    td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tr:hover td { background: var(--bg-card-alt); }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .tag-ok { background: var(--en-bg); color: var(--en); border-color: #B7DEC9; }
+    .tag-warn { background: var(--zh-bg); color: #8A5810; border-color: #E7CF9D; }
+    .tag-bad { background: var(--weak-bg); color: var(--weak); border-color: #E7B7AF; }
+    .tag-info { background: var(--math-bg); color: var(--math); border-color: #C2D7EC; }
+    .tag-muted { background: var(--bg-sub); color: var(--text-secondary); border-color: var(--border-strong); }
+
+    .child-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .pager {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 14px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    /* Drawer Overlay */
+    .drawer-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(30, 36, 43, 0.36);
+      z-index: 40;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .drawer {
+      width: min(820px, 100vw);
+      height: 100%;
+      background: var(--bg-paper);
+      border-left: 1px solid var(--border-strong);
+      display: flex;
+      flex-direction: column;
+      box-shadow: -8px 0 32px rgba(30, 36, 43, 0.16);
+    }
+    .drawer-head {
+      padding: 18px 22px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .drawer-tabs {
+      display: flex;
+      gap: 8px;
+      padding: 10px 22px;
+      background: var(--bg-card-alt);
+      border-bottom: 1px solid var(--border);
+    }
+    .tab-btn {
+      padding: 7px 14px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      background: transparent;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      background: var(--bg-card);
+      border-color: var(--border-strong);
+      color: var(--math);
+    }
+    .drawer-body {
+      padding: 20px 22px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .form-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    @media (max-width: 620px) {
+      .form-grid-2 { grid-template-columns: 1fr; }
+    }
+
+    .secret-box {
+      background: var(--zh-bg);
+      border: 1px dashed var(--zh);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .secret-val {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: var(--text);
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(30, 36, 43, 0.45);
+      z-index: 60;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+    .modal {
+      width: min(480px, 100%);
+      background: var(--bg-card);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      padding: 22px;
+      box-shadow: var(--shadow);
+    }
+    .modal-foot {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Auth Gate -->
+  <section id="authView" class="auth-shell">
+    <div class="auth-grid">
+      <div class="card">
+        <div class="brand-row">
+          <div class="brand-badge">学</div>
+          <div>
+            <h1 style="font-size:20px;font-weight:800;">基础学习 · 全局管理后台</h1>
+            <p class="subtext">用户信息、学习档案、学情分析与密码恢复中心</p>
+          </div>
+        </div>
+        <div id="adminLoginAlert" class="alert alert-err hidden"></div>
+        <form id="adminLoginForm">
+          <div class="field">
+            <label for="loginUsername">管理员用户名</label>
+            <input id="loginUsername" class="input" type="text" autocomplete="username" placeholder="例如 admin" required>
+          </div>
+          <div class="field">
+            <label for="loginPassword">管理员密码</label>
+            <input id="loginPassword" class="input" type="password" autocomplete="current-password" placeholder="请输入管理员密码" required>
+          </div>
+          <button id="loginSubmitBtn" class="btn btn-primary btn-block" type="submit">登录管理后台</button>
+        </form>
+      </div>
+
+      <div class="card-soft">
+        <h2 style="font-size:17px;font-weight:800;margin-bottom:6px;">忘记密码？凭恢复码自助重置</h2>
+        <p class="subtext" style="margin-bottom:16px;">家长或管理员均可通过注册时生成的 12 位恢复码重置密码；重置成功后将自动轮换生成新的恢复码。</p>
+        <div id="recoveryAlert" class="alert hidden"></div>
+        <form id="recoveryResetForm">
+          <div class="field">
+            <label for="recUsername">账号用户名</label>
+            <input id="recUsername" class="input" type="text" placeholder="请输入需要找回的用户名" required>
+          </div>
+          <div class="field">
+            <label for="recCode">账号恢复码</label>
+            <input id="recCode" class="input mono" type="text" placeholder="例如 XXXX-XXXX-XXXX" required>
+          </div>
+          <div class="field">
+            <label for="recNewPassword">设置新密码（至少 6 位）</label>
+            <input id="recNewPassword" class="input" type="password" minlength="6" placeholder="至少 6 位新密码" required>
+          </div>
+          <button id="recSubmitBtn" class="btn btn-zh btn-block" type="submit">验证恢复码并重置密码</button>
+        </form>
+        <div id="recSuccessBox" class="secret-box hidden" style="margin-top:14px;">
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#8A5810;">新恢复码（请立即抄写保存，旧恢复码已作废）</div>
+            <div id="recSuccessCode" class="secret-val mono"></div>
+          </div>
+          <button class="btn btn-secondary btn-sm" type="button" onclick="copyTextValue(document.getElementById('recSuccessCode').textContent, this)">复制恢复码</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Admin Workspace -->
+  <div id="dashboardView" class="hidden">
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="brand-badge" style="width:36px;height:36px;font-size:15px;">学</div>
+        <div>
+          <div style="font-size:16px;font-weight:800;">基础学习 · 全局管理后台</div>
+          <div class="subtext" id="adminIdentityText">管理员已连接</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-secondary btn-sm" type="button" id="refreshAllBtn">刷新看板</button>
+        <button class="btn btn-primary btn-sm" type="button" id="openCreateUserBtn">+ 新建账号</button>
+        <button class="btn btn-secondary btn-sm" type="button" id="openSelfPwdBtn">改管理员密码</button>
+        <button class="btn btn-danger-soft btn-sm" type="button" id="logoutBtn">退出登录</button>
+      </div>
+    </header>
+
+    <main class="main-wrap">
+      <!-- KPI Strip -->
+      <section class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">注册用户（启用 / 停用）</div>
+          <div class="kpi-value" id="kpiUsers">-</div>
+          <div class="kpi-sub" id="kpiUsersSub">加载中...</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">孩子学习档案</div>
+          <div class="kpi-value" id="kpiChildren">-</div>
+          <div class="kpi-sub" id="kpiChildrenSub">今日活跃 -</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">累计掌握知识点</div>
+          <div class="kpi-value" id="kpiMastered" style="color:var(--en);">-</div>
+          <div class="kpi-sub" id="kpiWeakSub">薄弱盲区 -</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">云端答题流水</div>
+          <div class="kpi-value" id="kpiEvents" style="color:var(--math);">-</div>
+          <div class="kpi-sub" id="kpiTodayEventsSub">今日答题 -</div>
+        </div>
+      </section>
+
+      <!-- Overview Charts + Audit -->
+      <section class="mid-grid">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+            <h2 style="font-size:15px;font-weight:800;">近 14 天全站做题趋势</h2>
+            <span class="subtext">按日聚合数学 / 语文 / 英语答题量</span>
+          </div>
+          <div id="trendBars" class="chart-bars"></div>
+          <div class="legend-row">
+            <span><span class="dot" style="background:var(--math);"></span>数学</span>
+            <span><span class="dot" style="background:var(--zh);"></span>语文</span>
+            <span><span class="dot" style="background:var(--en);"></span>英语</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 style="font-size:15px;font-weight:800;">年级档案分布 & 最近审计记录</h2>
+          <div id="gradeBuckets" class="grade-pills"></div>
+          <div id="recentAudits" class="audit-mini-list"></div>
+        </div>
+      </section>
+
+      <!-- Users Directory -->
+      <section class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
+          <div>
+            <h2 style="font-size:16px;font-weight:800;">用户与学习档案目录</h2>
+            <p class="subtext">点击「管理 / 详情」可修改账号、孩子年级、重置密码、生成恢复码及查看各科掌握情况</p>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <input id="searchInput" class="input" type="search" placeholder="搜索用户名或孩子昵称...">
+          <select id="gradeFilter" class="select">
+            <option value="">全部年级</option>
+            <option value="一年级">一年级</option>
+            <option value="二年级">二年级</option>
+            <option value="三年级">三年级</option>
+          </select>
+          <select id="statusFilter" class="select">
+            <option value="all">全部账号状态</option>
+            <option value="active">仅正常启用</option>
+            <option value="disabled">仅已停用</option>
+          </select>
+          <button class="btn btn-secondary btn-sm" type="button" id="searchBtn">筛选</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>用户名</th>
+                <th>状态 / 安全</th>
+                <th>关联孩子档案</th>
+                <th>累计进度</th>
+                <th>注册时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody">
+              <tr><td colspan="6" class="subtext">正在加载用户列表...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pager">
+          <span id="pagerInfo">第 1 页</span>
+          <div style="display:flex;gap:8px;">
+            <button id="prevPageBtn" class="btn btn-secondary btn-sm" type="button">上一页</button>
+            <button id="nextPageBtn" class="btn btn-secondary btn-sm" type="button">下一页</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- User Detail Drawer -->
+  <div id="userDrawerBackdrop" class="drawer-backdrop hidden">
+    <aside class="drawer">
+      <div class="drawer-head">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <h2 id="drawerUsername" style="font-size:18px;font-weight:800;">用户详情</h2>
+            <span id="drawerBadges"></span>
+          </div>
+          <div id="drawerUserId" class="subtext mono"></div>
+        </div>
+        <button class="btn btn-secondary btn-sm" type="button" id="closeDrawerBtn">关闭</button>
+      </div>
+
+      <div class="drawer-tabs">
+        <button class="tab-btn active" data-tab="account">账号与密码安全</button>
+        <button class="tab-btn" data-tab="learning">孩子档案与学情</button>
+        <button class="tab-btn" data-tab="audit">操作审计日志</button>
+      </div>
+
+      <div id="drawerBody" class="drawer-body"></div>
+    </aside>
+  </div>
+
+  <!-- Create User Modal -->
+  <div id="createUserModal" class="modal-backdrop hidden">
+    <div class="modal">
+      <h2 style="font-size:17px;font-weight:800;margin-bottom:6px;">新建用户账号</h2>
+      <p class="subtext" style="margin-bottom:14px;">系统将自动生成账号恢复码，密码留空则自动生成高强度初始密码。</p>
+      <div id="createUserAlert" class="alert hidden"></div>
+      <form id="createUserForm">
+        <div class="field">
+          <label for="newUsername">用户名（至少 2 个字符）</label>
+          <input id="newUsername" class="input" type="text" required minlength="2" maxlength="40">
+        </div>
+        <div class="field">
+          <label for="newPassword">初始密码（可选，留空自动生成）</label>
+          <input id="newPassword" class="input" type="text" maxlength="128" placeholder="留空自动生成 10 位密码">
+        </div>
+        <div class="form-grid-2">
+          <div class="field">
+            <label for="newChildName">初始孩子昵称</label>
+            <input id="newChildName" class="input" type="text" value="小宇" maxlength="24">
+          </div>
+          <div class="field">
+            <label for="newChildGrade">初始年级</label>
+            <select id="newChildGrade" class="select">
+              <option value="一年级">一年级</option>
+              <option value="二年级" selected>二年级</option>
+              <option value="三年级">三年级</option>
+            </select>
+          </div>
+        </div>
+        <div class="field" style="display:flex;align-items:center;gap:8px;">
+          <input id="newIsAdmin" type="checkbox" style="width:16px;height:16px;">
+          <label for="newIsAdmin" style="margin:0;cursor:pointer;">设为系统管理员账号</label>
+        </div>
+        <div id="createUserSecretResult" class="secret-box hidden" style="margin-bottom:12px;"></div>
+        <div class="modal-foot">
+          <button class="btn btn-secondary btn-sm" type="button" onclick="closeModal('createUserModal')">关闭</button>
+          <button class="btn btn-primary btn-sm" type="submit">创建账号</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Self Admin Password Modal -->
+  <div id="selfPwdModal" class="modal-backdrop hidden">
+    <div class="modal">
+      <h2 style="font-size:17px;font-weight:800;margin-bottom:6px;">修改当前管理员密码</h2>
+      <p class="subtext" style="margin-bottom:14px;">修改后旧管理员凭证立即失效，当前页面将自动换发新会话。</p>
+      <div id="selfPwdAlert" class="alert hidden"></div>
+      <form id="selfPwdForm">
+        <div class="field">
+          <label for="selfCurPwd">当前密码</label>
+          <input id="selfCurPwd" class="input" type="password" required>
+        </div>
+        <div class="field">
+          <label for="selfNewPwd">新密码（至少 6 位）</label>
+          <input id="selfNewPwd" class="input" type="password" minlength="6" required>
+        </div>
+        <div class="modal-foot">
+          <button class="btn btn-secondary btn-sm" type="button" onclick="closeModal('selfPwdModal')">取消</button>
+          <button class="btn btn-primary btn-sm" type="submit">确认修改</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const TOKEN_KEY = "study_admin_jwt";
+    const USER_KEY = "study_admin_user";
+
+    const state = {
+      token: localStorage.getItem(TOKEN_KEY) || "",
+      adminUser: localStorage.getItem(USER_KEY) || "",
+      page: 1,
+      pageSize: 15,
+      totalUsers: 0,
+      drawerUserId: null,
+      drawerTab: "account",
+      drawerData: null,
+      selectedChildIdx: 0,
+      topicSubjectFilter: "all",
+      topicStatusFilter: "all",
+    };
+
+    function esc(s) {
+      return String(s ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function fmtTime(ms) {
+      if (!ms) return "-";
+      const d = new Date(ms);
+      const pad = n => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function subjectLabel(subj) {
+      if (subj === "math") return '<span class="tag tag-info">数学</span>';
+      if (subj === "chinese") return '<span class="tag tag-warn">语文</span>';
+      if (subj === "english") return '<span class="tag tag-ok">英语</span>';
+      return '<span class="tag tag-muted">' + esc(subj || "未知") + '</span>';
+    }
+
+    function statusTag(status) {
+      if (status === "MASTERED") return '<span class="tag tag-ok">已掌握</span>';
+      if (status === "SHAKY") return '<span class="tag tag-warn">待巩固</span>';
+      if (status === "WEAK") return '<span class="tag tag-bad">薄弱盲区</span>';
+      return '<span class="tag tag-muted">未测</span>';
+    }
+
+    function setAlert(id, type, text) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (!text) {
+        el.className = "alert hidden";
+        el.textContent = "";
+        return;
+      }
+      el.className = `alert ${type === "ok" ? "alert-ok" : type === "warn" ? "alert-warn" : "alert-err"}`;
+      el.textContent = text;
+    }
+
+    async function copyTextValue(text, btn) {
+      try {
+        await navigator.clipboard.writeText(text);
+        const orig = btn.textContent;
+        btn.textContent = "已复制";
+        setTimeout(() => { btn.textContent = orig; }, 1400);
+      } catch (_) {
+        prompt("请手动复制以下内容：", text);
+      }
+    }
+
+    async function api(path, options = {}, authRequired = true) {
+      const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+      if (authRequired && state.token) {
+        headers["Authorization"] = `Bearer ${state.token}`;
+      }
+      const res = await fetch(path, { ...options, headers });
+      const raw = await res.text();
+      let data = {};
+      try { data = raw ? JSON.parse(raw) : {}; } catch (_) {}
+      if (!res.ok) {
+        if (res.status === 401 && authRequired) {
+          signOut("登录状态已过期，请重新登录。");
+        }
+        throw new Error(data.detail || `请求失败 (${res.status})`);
+      }
+      return data;
+    }
+
+    function showAuthView(message = "") {
+      document.getElementById("authView").classList.remove("hidden");
+      document.getElementById("dashboardView").classList.add("hidden");
+      if (message) setAlert("adminLoginAlert", "err", message);
+    }
+
+    function showDashboardView() {
+      document.getElementById("authView").classList.add("hidden");
+      document.getElementById("dashboardView").classList.remove("hidden");
+      document.getElementById("adminIdentityText").textContent = `当前管理员：${state.adminUser || "admin"}`;
+      loadDashboard();
+    }
+
+    function signOut(msg = "") {
+      state.token = "";
+      state.adminUser = "";
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+      closeDrawer();
+      showAuthView(msg);
+    }
+
+    async function loadDashboard() {
+      await Promise.all([loadOverview(), loadUsers()]);
+    }
+
+    async function loadOverview() {
+      try {
+        const data = await api("/api/v1/admin/overview");
+        document.getElementById("kpiUsers").textContent = data.totalUsers;
+        document.getElementById("kpiUsersSub").textContent = `启用 ${data.activeUsers} · 停用 ${data.disabledUsers}`;
+        document.getElementById("kpiChildren").textContent = data.totalChildren;
+        document.getElementById("kpiChildrenSub").textContent = `今日活跃孩子 ${data.todayActiveChildren} 人`;
+        document.getElementById("kpiMastered").textContent = data.totalMasteredTopics;
+        document.getElementById("kpiWeakSub").textContent = `待消灭薄弱点 ${data.totalWeakTopics} 条`;
+        document.getElementById("kpiEvents").textContent = data.totalQuizEvents;
+        document.getElementById("kpiTodayEventsSub").textContent = `今日新增答题 ${data.todayQuizEvents} 题`;
+
+        // Daily trends
+        const maxDay = Math.max(1, ...data.dailyTrends.map(d => d.totalCount));
+        const barsEl = document.getElementById("trendBars");
+        barsEl.innerHTML = data.dailyTrends.map(d => {
+          const totalH = Math.max(4, Math.round((d.totalCount / maxDay) * 108));
+          const mH = d.totalCount ? Math.round((d.mathCount / d.totalCount) * totalH) : 0;
+          const zH = d.totalCount ? Math.round((d.chineseCount / d.totalCount) * totalH) : 0;
+          const eH = Math.max(0, totalH - mH - zH);
+          const tip = `${d.studyDate}：共 ${d.totalCount} 题（数 ${d.mathCount} / 语 ${d.chineseCount} / 英 ${d.englishCount}）`;
+          return `
+            <div class="bar-col" title="${esc(tip)}">
+              <div class="bar-stack" style="height:${d.totalCount ? totalH : 4}px">
+                ${mH ? `<div class="bar-math" style="height:${mH}px"></div>` : ""}
+                ${zH ? `<div class="bar-zh" style="height:${zH}px"></div>` : ""}
+                ${eH ? `<div class="bar-en" style="height:${eH}px"></div>` : ""}
+              </div>
+              <div class="bar-day">${esc(d.studyDate.slice(8))}</div>
+            </div>
+          `;
+        }).join("");
+
+        // Grade distribution
+        document.getElementById("gradeBuckets").innerHTML = data.gradeDistribution.map(g => `
+          <div class="grade-pill">
+            <strong>${g.count}</strong>
+            <span>${esc(g.grade)}</span>
+          </div>
+        `).join("");
+
+        // Recent audits
+        const auditsEl = document.getElementById("recentAudits");
+        if (!data.recentAuditLogs.length) {
+          auditsEl.innerHTML = `<div class="subtext">暂无后台或找回操作记录</div>`;
+        } else {
+          auditsEl.innerHTML = data.recentAuditLogs.slice(0, 8).map(a => `
+            <div class="audit-item">
+              <div class="audit-meta">
+                <span>${esc(a.actorUsername)} · ${esc(a.action)}</span>
+                <span>${fmtTime(a.createdAtMs)}</span>
+              </div>
+              <div>${esc(a.summary)}</div>
+            </div>
+          `).join("");
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function loadUsers() {
+      const q = encodeURIComponent(document.getElementById("searchInput").value.trim());
+      const grade = encodeURIComponent(document.getElementById("gradeFilter").value);
+      const st = encodeURIComponent(document.getElementById("statusFilter").value);
+      const tbody = document.getElementById("usersTableBody");
+      try {
+        const res = await api(`/api/v1/admin/users?q=${q}&grade=${grade}&accountStatus=${st}&page=${state.page}&pageSize=${state.pageSize}`);
+        state.totalUsers = res.total;
+        const totalPages = Math.max(1, Math.ceil(res.total / state.pageSize));
+        document.getElementById("pagerInfo").textContent = `共 ${res.total} 个账号 · 第 ${res.page} / ${totalPages} 页`;
+        document.getElementById("prevPageBtn").disabled = res.page <= 1;
+        document.getElementById("nextPageBtn").disabled = res.page >= totalPages;
+
+        if (!res.items.length) {
+          tbody.innerHTML = `<tr><td colspan="6" class="subtext">没有匹配的用户账号</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = res.items.map(u => {
+          const masteredSum = u.children.reduce((acc, c) => acc + c.masteredCount, 0);
+          const weakSum = u.children.reduce((acc, c) => acc + c.weakCount, 0);
+          const eventsSum = u.children.reduce((acc, c) => acc + c.totalQuizEvents, 0);
+          const childChips = u.children.length
+            ? u.children.map(c => `<span class="tag tag-muted">${esc(c.name)} · ${esc(c.grade)}</span>`).join("")
+            : `<span class="subtext">无孩子档案</span>`;
+          return `
+            <tr>
+              <td>
+                <div style="font-weight:800;">${esc(u.username)}</div>
+                <div class="subtext mono" style="font-size:11px;">${esc(u.id.slice(0, 8))}</div>
+              </td>
+              <td>
+                <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                  ${u.isAdmin ? '<span class="tag tag-info">管理员</span>' : ''}
+                  ${u.isDisabled ? '<span class="tag tag-bad">已停用</span>' : '<span class="tag tag-ok">正常</span>'}
+                  ${u.hasRecoveryCode ? '<span class="tag tag-muted">有恢复码</span>' : '<span class="tag tag-warn">未设恢复码</span>'}
+                </div>
+              </td>
+              <td><div class="child-chips">${childChips}</div></td>
+              <td>
+                <div style="font-size:12px;">掌握 <b>${masteredSum}</b> · 薄弱 <b style="color:var(--weak);">${weakSum}</b></div>
+                <div class="subtext" style="font-size:11px;">云端答题 ${eventsSum} 条</div>
+              </td>
+              <td class="subtext" style="white-space:nowrap;">${fmtTime(u.createdAtMs)}</td>
+              <td>
+                <button class="btn btn-primary btn-sm" type="button" onclick="openUserDrawer('${esc(u.id)}')">管理 / 详情</button>
+              </td>
+            </tr>
+          `;
+        }).join("");
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" style="color:var(--weak);">${esc(err.message)}</td></tr>`;
+      }
+    }
+
+    async function openUserDrawer(userId, keepChildIdx = false) {
+      state.drawerUserId = userId;
+      if (!keepChildIdx) state.selectedChildIdx = 0;
+      document.getElementById("userDrawerBackdrop").classList.remove("hidden");
+      document.getElementById("drawerBody").innerHTML = `<p class="subtext">正在读取用户与学情详情...</p>`;
+      try {
+        const detail = await api(`/api/v1/admin/users/${encodeURIComponent(userId)}`);
+        state.drawerData = detail;
+        renderDrawer();
+      } catch (err) {
+        document.getElementById("drawerBody").innerHTML = `<div class="alert alert-err">${esc(err.message)}</div>`;
+      }
+    }
+
+    function closeDrawer() {
+      state.drawerUserId = null;
+      state.drawerData = null;
+      document.getElementById("userDrawerBackdrop").classList.add("hidden");
+    }
+
+    function renderDrawer() {
+      const detail = state.drawerData;
+      if (!detail) return;
+      const u = detail.user;
+
+      document.getElementById("drawerUsername").textContent = u.username;
+      document.getElementById("drawerUserId").textContent = `ID: ${u.id} · token_version=${u.tokenVersion} · 注册于 ${fmtTime(u.createdAtMs)}`;
+      document.getElementById("drawerBadges").innerHTML = [
+        u.isAdmin ? '<span class="tag tag-info">管理员</span>' : '',
+        u.isDisabled ? '<span class="tag tag-bad">已停用</span>' : '<span class="tag tag-ok">启用中</span>',
+        u.hasRecoveryCode ? '<span class="tag tag-muted">已设恢复码</span>' : '<span class="tag tag-warn">未设恢复码</span>',
+      ].join(" ");
+
+      document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.tab === state.drawerTab);
+      });
+
+      const body = document.getElementById("drawerBody");
+      if (state.drawerTab === "account") {
+        body.innerHTML = renderAccountTab(u);
+        bindAccountTabEvents(u);
+      } else if (state.drawerTab === "learning") {
+        body.innerHTML = renderLearningTab(detail);
+        bindLearningTabEvents(detail);
+      } else {
+        body.innerHTML = renderAuditTab(detail.auditLogs);
+      }
+    }
+
+    function renderAccountTab(u) {
+      return `
+        <div class="card">
+          <h3 style="font-size:15px;font-weight:800;margin-bottom:12px;">基础账号信息</h3>
+          <div id="userPatchAlert" class="alert hidden"></div>
+          <div class="form-grid-2">
+            <div class="field">
+              <label for="editUsername">账号用户名</label>
+              <input id="editUsername" class="input" type="text" value="${esc(u.username)}" minlength="2" maxlength="40">
+            </div>
+            <div class="field">
+              <label for="editDisabled">账号访问状态</label>
+              <select id="editDisabled" class="select">
+                <option value="false" ${!u.isDisabled ? "selected" : ""}>正常启用</option>
+                <option value="true" ${u.isDisabled ? "selected" : ""}>已停用（禁止登录与同步）</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:6px;">
+            <label style="display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;cursor:pointer;">
+              <input id="editIsAdmin" type="checkbox" ${u.isAdmin ? "checked" : ""} style="width:16px;height:16px;">
+              赋予系统管理员权限
+            </label>
+            <button id="saveUserPatchBtn" class="btn btn-primary btn-sm" type="button">保存账号信息</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 style="font-size:15px;font-weight:800;margin-bottom:4px;">后台代重置登录密码</h3>
+          <p class="subtext" style="margin-bottom:12px;">可手动指定新密码或留空随机生成临时密码。重置后旧平板登录凭证立即失效。</p>
+          <div id="adminResetPwdAlert" class="alert hidden"></div>
+          <div class="form-grid-2">
+            <div class="field">
+              <label for="resetCustomPwd">新密码（可选，留空自动随机生成）</label>
+              <input id="resetCustomPwd" class="input" type="text" placeholder="留空生成 10 位临时密码">
+            </div>
+            <div class="field" style="display:flex;align-items:flex-end;padding-bottom:8px;">
+              <label style="display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;cursor:pointer;">
+                <input id="alsoRotateRec" type="checkbox" style="width:16px;height:16px;">
+                同时轮换生成新恢复码
+              </label>
+            </div>
+          </div>
+          <button id="doAdminResetPwdBtn" class="btn btn-zh btn-sm" type="button">立即重置该账号密码</button>
+          <div id="resetPwdSecretBox" class="secret-box hidden" style="margin-top:12px;"></div>
+        </div>
+
+        <div class="card">
+          <h3 style="font-size:15px;font-weight:800;margin-bottom:4px;">恢复码管理（忘记密码自助凭证）</h3>
+          <p class="subtext" style="margin-bottom:12px;">当前状态：${u.hasRecoveryCode ? `已配置（更新于 ${fmtTime(u.recoveryCodeUpdatedAtMs)}）` : "尚未生成"}。恢复码仅哈希存储，后台无法反查旧恢复码，只可重新生成。</p>
+          <div id="rotateRecAlert" class="alert hidden"></div>
+          <button id="doRotateRecBtn" class="btn btn-secondary btn-sm" type="button">重新生成 12 位恢复码</button>
+          <div id="rotateRecSecretBox" class="secret-box hidden" style="margin-top:12px;"></div>
+        </div>
+
+        <div class="card" style="border-color:#E7B7AF;">
+          <h3 style="font-size:15px;font-weight:800;color:var(--weak);margin-bottom:4px;">危险操作：永久删除账号</h3>
+          <p class="subtext" style="margin-bottom:12px;">将级联删除该用户下全部孩子档案、知识点记录、学习日历与做题流水，无法恢复。</p>
+          <div id="deleteUserAlert" class="alert hidden"></div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <input id="deleteConfirmInput" class="input" style="max-width:240px;" type="text" placeholder="输入 ${esc(u.username)} 确认删除">
+            <button id="doDeleteUserBtn" class="btn btn-danger btn-sm" type="button" disabled>确认永久删除</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function bindAccountTabEvents(u) {
+      document.getElementById("saveUserPatchBtn").onclick = async () => {
+        try {
+          await api(`/api/v1/admin/users/${encodeURIComponent(u.id)}`, {
+            method: "PATCH",
+            body: JSON.stringify({
+              username: document.getElementById("editUsername").value.trim(),
+              isDisabled: document.getElementById("editDisabled").value === "true",
+              isAdmin: document.getElementById("editIsAdmin").checked,
+            }),
+          });
+          setAlert("userPatchAlert", "ok", "账号信息已保存");
+          await Promise.all([loadDashboard(), openUserDrawer(u.id, true)]);
+        } catch (err) {
+          setAlert("userPatchAlert", "err", err.message);
+        }
+      };
+
+      document.getElementById("doAdminResetPwdBtn").onclick = async () => {
+        const customPwd = document.getElementById("resetCustomPwd").value.trim();
+        const alsoRec = document.getElementById("alsoRotateRec").checked;
+        try {
+          const res = await api(`/api/v1/admin/users/${encodeURIComponent(u.id)}/reset-password`, {
+            method: "POST",
+            body: JSON.stringify({ newPassword: customPwd || null, alsoRotateRecoveryCode: alsoRec }),
+          });
+          setAlert("adminResetPwdAlert", "ok", `密码已重置（旧设备需用新密码登录，当前 token_version=${res.tokenVersion}）`);
+          const box = document.getElementById("resetPwdSecretBox");
+          box.classList.remove("hidden");
+          box.innerHTML = `
+            <div>
+              <div style="font-size:12px;font-weight:700;color:#8A5810;">一次性临时密码${res.recoveryCode ? " & 新恢复码" : ""}</div>
+              <div class="secret-val mono">${esc(res.temporaryPassword)}</div>
+              ${res.recoveryCode ? `<div style="font-size:13px;margin-top:4px;">新恢复码：<b class="mono">${esc(res.recoveryCode)}</b></div>` : ""}
+            </div>
+            <button class="btn btn-secondary btn-sm" type="button" onclick="copyTextValue('${esc(res.temporaryPassword)}', this)">复制临时密码</button>
+          `;
+          await Promise.all([loadOverview(), loadUsers()]);
+        } catch (err) {
+          setAlert("adminResetPwdAlert", "err", err.message);
+        }
+      };
+
+      document.getElementById("doRotateRecBtn").onclick = async () => {
+        try {
+          const res = await api(`/api/v1/admin/users/${encodeURIComponent(u.id)}/rotate-recovery-code`, {
+            method: "POST",
+          });
+          setAlert("rotateRecAlert", "ok", "已生成新恢复码（请复制发给用户妥善保存）");
+          const box = document.getElementById("rotateRecSecretBox");
+          box.classList.remove("hidden");
+          box.innerHTML = `
+            <div>
+              <div style="font-size:12px;font-weight:700;color:#8A5810;">新账号恢复码（仅展示一次）</div>
+              <div class="secret-val mono">${esc(res.recoveryCode)}</div>
+            </div>
+            <button class="btn btn-secondary btn-sm" type="button" onclick="copyTextValue('${esc(res.recoveryCode)}', this)">复制恢复码</button>
+          `;
+          await loadUsers();
+        } catch (err) {
+          setAlert("rotateRecAlert", "err", err.message);
+        }
+      };
+
+      const delInput = document.getElementById("deleteConfirmInput");
+      const delBtn = document.getElementById("doDeleteUserBtn");
+      delInput.oninput = () => {
+        delBtn.disabled = delInput.value.trim() !== u.username;
+      };
+      delBtn.onclick = async () => {
+        try {
+          await api(`/api/v1/admin/users/${encodeURIComponent(u.id)}`, { method: "DELETE" });
+          closeDrawer();
+          await loadDashboard();
+        } catch (err) {
+          setAlert("deleteUserAlert", "err", err.message);
+        }
+      };
+    }
+
+    function renderLearningTab(detail) {
+      if (!detail.children.length) {
+        return `<div class="card"><p class="subtext">该账号下暂无孩子学习档案（管理员账号默认无孩子档案）。</p></div>`;
+      }
+      const idx = Math.min(state.selectedChildIdx, detail.children.length - 1);
+      const childDetail = detail.children[idx];
+      const c = childDetail.summary;
+
+      const childSwitchers = detail.children.map((item, i) => `
+        <button class="btn btn-sm ${i === idx ? "btn-primary" : "btn-secondary"}" type="button" onclick="selectChildTab(${i})">
+          ${esc(item.summary.name)} · ${esc(item.summary.grade)}
+        </button>
+      `).join("");
+
+      const filteredRecords = childDetail.records.filter(r => {
+        if (state.topicSubjectFilter !== "all" && r.subject !== state.topicSubjectFilter) return false;
+        if (state.topicStatusFilter !== "all" && r.status !== state.topicStatusFilter) return false;
+        return true;
+      });
+
+      const subjSummary = ["math", "chinese", "english"].map(subj => {
+        const list = childDetail.records.filter(r => r.subject === subj);
+        const m = list.filter(r => r.status === "MASTERED").length;
+        const s = list.filter(r => r.status === "SHAKY").length;
+        const w = list.filter(r => r.status === "WEAK").length;
+        return `
+          <div class="grade-pill" style="text-align:left;padding:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              ${subjectLabel(subj)}
+              <span class="subtext" style="font-size:11px;">有记录 ${list.length} 知识点</span>
+            </div>
+            <div style="font-size:12px;">掌握 <b>${m}</b> · 巩固 <b>${s}</b> · 薄弱 <b style="color:var(--weak);">${w}</b></div>
+          </div>
+        `;
+      }).join("");
+
+      return `
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">${childSwitchers}</div>
+
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+            <div>
+              <h3 style="font-size:15px;font-weight:800;">修改孩子档案（实时同步至平板）</h3>
+              <div class="subtext">resetVersion=${c.resetVersion} · 最近同步=${fmtTime(c.updatedAtMs)}</div>
+            </div>
+            <button id="adminResetChildBtn" class="btn btn-danger-soft btn-sm" type="button">清空该孩子学习进度</button>
+          </div>
+          <div id="childEditAlert" class="alert hidden"></div>
+          <div class="form-grid-2">
+            <div class="field">
+              <label for="childNameInput">孩子昵称</label>
+              <input id="childNameInput" class="input" type="text" value="${esc(c.name)}" maxlength="24">
+            </div>
+            <div class="field">
+              <label for="childGradeInput">当前年级</label>
+              <select id="childGradeInput" class="select">
+                <option value="一年级" ${c.grade === "一年级" ? "selected" : ""}>一年级</option>
+                <option value="二年级" ${c.grade === "二年级" ? "selected" : ""}>二年级</option>
+                <option value="三年级" ${c.grade === "三年级" ? "selected" : ""}>三年级</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="childTermInput">默认学期</label>
+              <select id="childTermInput" class="select">
+                <option value="上" ${c.defaultTerm === "上" ? "selected" : ""}>上册</option>
+                <option value="下" ${c.defaultTerm === "下" ? "selected" : ""}>下册</option>
+                <option value="全" ${c.defaultTerm === "全" ? "selected" : ""}>全学年</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="childStreakInput">连续答对掌握门槛</label>
+              <select id="childStreakInput" class="select">
+                <option value="2" ${c.masteryStreak === 2 ? "selected" : ""}>连对 2 题掌握</option>
+                <option value="3" ${c.masteryStreak === 3 ? "selected" : ""}>连对 3 题掌握</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="childAudioInput">英语点读语音模式</label>
+              <select id="childAudioInput" class="select">
+                <option value="bundled_tts" ${c.englishAudioMode === "bundled_tts" ? "selected" : ""}>离线真人音频 + TTS</option>
+                <option value="tts_only" ${c.englishAudioMode === "tts_only" ? "selected" : ""}>仅系统 TTS 朗读</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="childRateInput">英语语速 (${c.speechRate.toFixed(2)}x)</label>
+              <input id="childRateInput" class="input" type="number" min="0.75" max="1.25" step="0.01" value="${c.speechRate.toFixed(2)}">
+            </div>
+          </div>
+          <button id="saveChildBtn" class="btn btn-primary btn-sm" type="button">保存孩子档案设置</button>
+        </div>
+
+        <div class="grade-pills">${subjSummary}</div>
+
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+            <h3 style="font-size:15px;font-weight:800;">知识点掌握明细（${filteredRecords.length}）</h3>
+            <div style="display:flex;gap:8px;">
+              <select id="recSubjFilter" class="select" style="width:auto;height:32px;font-size:12px;">
+                <option value="all" ${state.topicSubjectFilter === "all" ? "selected" : ""}>全学科</option>
+                <option value="math" ${state.topicSubjectFilter === "math" ? "selected" : ""}>数学</option>
+                <option value="chinese" ${state.topicSubjectFilter === "chinese" ? "selected" : ""}>语文</option>
+                <option value="english" ${state.topicSubjectFilter === "english" ? "selected" : ""}>英语</option>
+              </select>
+              <select id="recStatusFilter" class="select" style="width:auto;height:32px;font-size:12px;">
+                <option value="all" ${state.topicStatusFilter === "all" ? "selected" : ""}>全部状态</option>
+                <option value="WEAK" ${state.topicStatusFilter === "WEAK" ? "selected" : ""}>仅薄弱盲区</option>
+                <option value="SHAKY" ${state.topicStatusFilter === "SHAKY" ? "selected" : ""}>仅待巩固</option>
+                <option value="MASTERED" ${state.topicStatusFilter === "MASTERED" ? "selected" : ""}>仅已掌握</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-wrap" style="max-height:280px;overflow:auto;">
+            <table>
+              <thead>
+                <tr><th>学科</th><th>知识点</th><th>年级学期</th><th>状态</th><th>作答 / 错题</th></tr>
+              </thead>
+              <tbody>
+                ${filteredRecords.length ? filteredRecords.map(r => `
+                  <tr>
+                    <td>${subjectLabel(r.subject)}</td>
+                    <td>
+                      <div style="font-weight:700;">${esc(r.title)}</div>
+                      <div class="subtext" style="font-size:11px;">${esc(r.unit || r.topicId)}</div>
+                    </td>
+                    <td class="subtext">${r.grade ? `${r.grade}年级` : ""}${esc(r.term)}</td>
+                    <td>${statusTag(r.status)}</td>
+                    <td class="subtext">${r.attempts} 次（错 ${r.wrongCount} / 连对 ${r.consecutiveCorrect}）</td>
+                  </tr>
+                `).join("") : `<tr><td colspan="5" class="subtext">暂无匹配的知识点学习记录</td></tr>`}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 style="font-size:15px;font-weight:800;margin-bottom:10px;">最近答题流水（最新 50 条）</h3>
+          <div class="table-wrap" style="max-height:260px;overflow:auto;">
+            <table>
+              <thead><tr><th>时间</th><th>学科</th><th>知识点</th><th>结果</th><th>备注</th></tr></thead>
+              <tbody>
+                ${childDetail.recentEvents.length ? childDetail.recentEvents.map(ev => `
+                  <tr>
+                    <td class="subtext" style="white-space:nowrap;">${fmtTime(ev.createdAtMs)}</td>
+                    <td>${subjectLabel(ev.subject)}</td>
+                    <td>${esc(ev.topicTitle)}</td>
+                    <td>${ev.isSkipped ? '<span class="tag tag-muted">跳过</span>' : ev.isCorrect ? '<span class="tag tag-ok">正确</span>' : '<span class="tag tag-bad">答错</span>'}</td>
+                    <td class="subtext">${esc(ev.note)}</td>
+                  </tr>
+                `).join("") : `<tr><td colspan="5" class="subtext">暂无答题流水记录</td></tr>`}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function bindLearningTabEvents(detail) {
+      if (!detail.children.length) return;
+      const child = detail.children[Math.min(state.selectedChildIdx, detail.children.length - 1)].summary;
+
+      document.getElementById("saveChildBtn").onclick = async () => {
+        try {
+          await api(`/api/v1/admin/children/${encodeURIComponent(child.id)}`, {
+            method: "PATCH",
+            body: JSON.stringify({
+              name: document.getElementById("childNameInput").value.trim(),
+              grade: document.getElementById("childGradeInput").value,
+              defaultTerm: document.getElementById("childTermInput").value,
+              masteryStreak: Number(document.getElementById("childStreakInput").value),
+              englishAudioMode: document.getElementById("childAudioInput").value,
+              speechRate: Number(document.getElementById("childRateInput").value),
+            }),
+          });
+          setAlert("childEditAlert", "ok", "孩子档案已更新，平板下次同步即自动切换");
+          await Promise.all([loadDashboard(), openUserDrawer(detail.user.id, true)]);
+        } catch (err) {
+          setAlert("childEditAlert", "err", err.message);
+        }
+      };
+
+      document.getElementById("adminResetChildBtn").onclick = async () => {
+        if (!confirm(`确定清空孩子「${child.name}」的数学/语文/英语全部学习进度与答题记录？此操作不可撤回！`)) return;
+        try {
+          await api(`/api/v1/admin/children/${encodeURIComponent(child.id)}/reset`, { method: "POST" });
+          setAlert("childEditAlert", "ok", "该孩子云端进度已清空（resetVersion 已递增，平板下次同步会自动重置）");
+          await Promise.all([loadDashboard(), openUserDrawer(detail.user.id, true)]);
+        } catch (err) {
+          setAlert("childEditAlert", "err", err.message);
+        }
+      };
+
+      document.getElementById("recSubjFilter").onchange = (e) => {
+        state.topicSubjectFilter = e.target.value;
+        renderDrawer();
+      };
+      document.getElementById("recStatusFilter").onchange = (e) => {
+        state.topicStatusFilter = e.target.value;
+        renderDrawer();
+      };
+    }
+
+    function selectChildTab(idx) {
+      state.selectedChildIdx = idx;
+      renderDrawer();
+    }
+
+    function renderAuditTab(logs) {
+      if (!logs.length) {
+        return `<div class="card"><p class="subtext">该账号及关联孩子档案暂无操作审计日志</p></div>`;
+      }
+      return `
+        <div class="card" style="display:flex;flex-direction:column;gap:8px;">
+          <h3 style="font-size:15px;font-weight:800;margin-bottom:4px;">该账号相关敏感操作审计</h3>
+          ${logs.map(a => `
+            <div class="audit-item">
+              <div class="audit-meta">
+                <span>操作者：<b>${esc(a.actorUsername)}</b> · ${esc(a.action)}</span>
+                <span>${fmtTime(a.createdAtMs)}</span>
+              </div>
+              <div>${esc(a.summary)}</div>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function openModal(id) { document.getElementById(id).classList.remove("hidden"); }
+    function closeModal(id) { document.getElementById(id).classList.add("hidden"); }
+
+    // Wire static controls
+    document.getElementById("adminLoginForm").onsubmit = async (e) => {
+      e.preventDefault();
+      setAlert("adminLoginAlert", "err", "");
+      const btn = document.getElementById("loginSubmitBtn");
+      btn.disabled = true;
+      try {
+        const res = await api("/api/v1/admin/login", {
+          method: "POST",
+          body: JSON.stringify({
+            username: document.getElementById("loginUsername").value.trim(),
+            password: document.getElementById("loginPassword").value,
+          }),
+        }, false);
+        state.token = res.token;
+        state.adminUser = res.user.username;
+        localStorage.setItem(TOKEN_KEY, state.token);
+        localStorage.setItem(USER_KEY, state.adminUser);
+        document.getElementById("loginPassword").value = "";
+        showDashboardView();
+      } catch (err) {
+        setAlert("adminLoginAlert", "err", err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    };
+
+    document.getElementById("recoveryResetForm").onsubmit = async (e) => {
+      e.preventDefault();
+      setAlert("recoveryAlert", "err", "");
+      document.getElementById("recSuccessBox").classList.add("hidden");
+      const btn = document.getElementById("recSubmitBtn");
+      btn.disabled = true;
+      try {
+        const res = await api("/api/v1/auth/reset-by-recovery", {
+          method: "POST",
+          body: JSON.stringify({
+            username: document.getElementById("recUsername").value.trim(),
+            recoveryCode: document.getElementById("recCode").value.trim(),
+            newPassword: document.getElementById("recNewPassword").value,
+          }),
+        }, false);
+        setAlert("recoveryAlert", "ok", res.message);
+        document.getElementById("recSuccessCode").textContent = res.newRecoveryCode;
+        document.getElementById("recSuccessBox").classList.remove("hidden");
+        document.getElementById("recCode").value = "";
+        document.getElementById("recNewPassword").value = "";
+      } catch (err) {
+        setAlert("recoveryAlert", "err", err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    };
+
+    document.getElementById("refreshAllBtn").onclick = loadDashboard;
+    document.getElementById("logoutBtn").onclick = () => signOut("");
+    document.getElementById("searchBtn").onclick = () => { state.page = 1; loadUsers(); };
+    document.getElementById("searchInput").onkeydown = (e) => {
+      if (e.key === "Enter") { state.page = 1; loadUsers(); }
+    };
+    document.getElementById("gradeFilter").onchange = () => { state.page = 1; loadUsers(); };
+    document.getElementById("statusFilter").onchange = () => { state.page = 1; loadUsers(); };
+    document.getElementById("prevPageBtn").onclick = () => { if (state.page > 1) { state.page--; loadUsers(); } };
+    document.getElementById("nextPageBtn").onclick = () => { state.page++; loadUsers(); };
+
+    document.getElementById("closeDrawerBtn").onclick = closeDrawer;
+    document.getElementById("userDrawerBackdrop").onclick = (e) => {
+      if (e.target === e.currentTarget) closeDrawer();
+    };
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.onclick = () => {
+        state.drawerTab = btn.dataset.tab;
+        renderDrawer();
+      };
+    });
+
+    document.getElementById("openCreateUserBtn").onclick = () => {
+      setAlert("createUserAlert", "ok", "");
+      document.getElementById("createUserSecretResult").classList.add("hidden");
+      document.getElementById("createUserForm").reset();
+      openModal("createUserModal");
+    };
+    document.getElementById("createUserForm").onsubmit = async (e) => {
+      e.preventDefault();
+      setAlert("createUserAlert", "ok", "");
+      try {
+        const res = await api("/api/v1/admin/users", {
+          method: "POST",
+          body: JSON.stringify({
+            username: document.getElementById("newUsername").value.trim(),
+            password: document.getElementById("newPassword").value.trim() || null,
+            initialChildName: document.getElementById("newChildName").value.trim() || "小宇",
+            initialGrade: document.getElementById("newChildGrade").value,
+            isAdmin: document.getElementById("newIsAdmin").checked,
+          }),
+        });
+        setAlert("createUserAlert", "ok", `账号 ${res.user.username} 创建成功！请抄写保存凭证：`);
+        const box = document.getElementById("createUserSecretResult");
+        box.classList.remove("hidden");
+        box.innerHTML = `
+          <div>
+            <div style="font-size:12px;">初始密码：<b class="mono">${esc(res.initialPassword)}</b></div>
+            <div style="font-size:12px;margin-top:4px;">恢复码：<b class="mono">${esc(res.recoveryCode)}</b></div>
+          </div>
+          <button class="btn btn-secondary btn-sm" type="button" onclick="copyTextValue('用户名:${esc(res.user.username)} 密码:${esc(res.initialPassword)} 恢复码:${esc(res.recoveryCode)}', this)">全部复制</button>
+        `;
+        await loadDashboard();
+      } catch (err) {
+        setAlert("createUserAlert", "err", err.message);
+      }
+    };
+
+    document.getElementById("openSelfPwdBtn").onclick = () => {
+      setAlert("selfPwdAlert", "ok", "");
+      document.getElementById("selfPwdForm").reset();
+      openModal("selfPwdModal");
+    };
+    document.getElementById("selfPwdForm").onsubmit = async (e) => {
+      e.preventDefault();
+      setAlert("selfPwdAlert", "ok", "");
+      try {
+        const res = await api("/api/v1/admin/change-password", {
+          method: "POST",
+          body: JSON.stringify({
+            currentPassword: document.getElementById("selfCurPwd").value,
+            newPassword: document.getElementById("selfNewPwd").value,
+          }),
+        });
+        state.token = res.token;
+        localStorage.setItem(TOKEN_KEY, res.token);
+        setAlert("selfPwdAlert", "ok", res.message);
+        document.getElementById("selfPwdForm").reset();
+        await loadOverview();
+      } catch (err) {
+        setAlert("selfPwdAlert", "err", err.message);
+      }
+    };
+
+    // Bootstrap
+    if (state.token) {
+      showDashboardView();
+    } else {
+      showAuthView();
+    }
+  </script>
+</body>
+</html>

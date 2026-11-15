@@ -5,12 +5,18 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -20,9 +26,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -83,8 +91,13 @@ fun LearningTabletApp(viewModel: MainViewModel = viewModel()) {
                 initialRegisterMode = state.preferRegisterTab,
                 isLoading = state.authLoading,
                 errorMessage = state.authError,
+                recoveryLoading = state.recoveryResetLoading,
+                recoveryError = state.recoveryResetError,
+                recoverySuccessCode = state.recoveryResetSuccessCode,
                 onLogin = viewModel::login,
                 onRegister = viewModel::register,
+                onResetByRecovery = viewModel::resetPasswordByRecovery,
+                onClearRecoveryState = viewModel::clearRecoveryResetState,
                 onClearError = viewModel::clearAuthError
             )
         } else {
@@ -175,6 +188,9 @@ fun LearningTabletApp(viewModel: MainViewModel = viewModel()) {
                             onUpdateEnglishAudioMode = viewModel::updateEnglishAudioMode,
                             onUpdateSpeechRate = viewModel::updateSpeechRate,
                             onExportBackup = viewModel::exportBackup,
+                            onChangePassword = viewModel::changeAccountPassword,
+                            onRotateRecoveryCode = viewModel::rotateRecoveryCode,
+                            onClearSecurityError = viewModel::clearSecurityOpError,
                             onResetAllData = viewModel::resetAllData,
                             onClearResetError = viewModel::clearResetError,
                             onSyncNow = viewModel::syncNow,
@@ -223,6 +239,66 @@ fun LearningTabletApp(viewModel: MainViewModel = viewModel()) {
                 onCreateChild = viewModel::createChild,
                 onSave = viewModel::saveProfile
             )
+        }
+
+        state.pendingRecoveryCodeDialog?.let { recoveryCode ->
+            Dialog(onDismissRequest = viewModel::dismissRecoveryCodeDialog) {
+                Column(
+                    modifier = Modifier
+                        .width(460.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(AppColors.CardSurface)
+                        .border(1.dp, AppColors.BorderWarm, RoundedCornerShape(24.dp))
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Text(
+                        text = "请抄写保存账号恢复码",
+                        color = AppColors.TextPrimary,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Text(
+                        text = "忘记密码时可凭「用户名 + 此恢复码」在平板或网页端自助重置密码；此恢复码仅本次明文展示，请妥善保管。",
+                        color = AppColors.TextSecondary,
+                        fontSize = 13.sp,
+                        lineHeight = 20.sp
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(AppColors.ZhBadgeBg)
+                            .border(1.dp, AppColors.ZhBorder, RoundedCornerShape(14.dp))
+                            .padding(vertical = 16.dp, horizontal = 18.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = recoveryCode,
+                            color = AppColors.TextPrimary,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(AppColors.MathPrimary)
+                            .clickable(onClick = viewModel::dismissRecoveryCodeDialog),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "我已抄写保存，进入使用",
+                            color = AppColors.TextOnAccent,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                }
+            }
         }
     }
 }

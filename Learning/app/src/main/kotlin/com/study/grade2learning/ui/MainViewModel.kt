@@ -59,6 +59,12 @@ data class UiState(
     val pendingSyncCount: Int = 0,
     val authLoading: Boolean = false,
     val authError: String = "",
+    val pendingRecoveryCodeDialog: String? = null,
+    val recoveryResetLoading: Boolean = false,
+    val recoveryResetError: String = "",
+    val recoveryResetSuccessCode: String? = null,
+    val securityOpLoading: Boolean = false,
+    val securityOpError: String = "",
     val resetInProgress: Boolean = false,
     val resetError: String = "",
     val screen: AppScreen = AppScreen.HOME,
@@ -264,10 +270,130 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val snapshot = cloud.fetchSnapshot(res.token, firstChild.id)
                 repo.saveSnapshot(snapshot)
                 hydrateFromLocalCache(session = session, bundle = null)
+                if (!res.recoveryCode.isNullOrBlank()) {
+                    _uiState.update { it.copy(pendingRecoveryCodeDialog = res.recoveryCode) }
+                }
             } catch (e: CloudApiException) {
                 _uiState.update { it.copy(authLoading = false, authError = e.message) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(authLoading = false, authError = "注册失败，请稍后重试") }
+            }
+        }
+    }
+
+    fun dismissRecoveryCodeDialog() {
+        _uiState.update { it.copy(pendingRecoveryCodeDialog = null) }
+    }
+
+    fun clearRecoveryResetState() {
+        _uiState.update {
+            it.copy(
+                recoveryResetLoading = false,
+                recoveryResetError = "",
+                recoveryResetSuccessCode = null
+            )
+        }
+    }
+
+    fun resetPasswordByRecovery(username: String, recoveryCode: String, newPassword: String) {
+        val cleanUser = username.trim()
+        val cleanCode = recoveryCode.trim()
+        if (cleanUser.length < 2) {
+            _uiState.update { it.copy(recoveryResetError = "请输入正确的用户名") }
+            return
+        }
+        if (cleanCode.length < 6) {
+            _uiState.update { it.copy(recoveryResetError = "请输入完整的账号恢复码") }
+            return
+        }
+        if (newPassword.length < 6) {
+            _uiState.update { it.copy(recoveryResetError = "新密码至少 6 位") }
+            return
+        }
+        _uiState.update {
+            it.copy(
+                recoveryResetLoading = true,
+                recoveryResetError = "",
+                recoveryResetSuccessCode = null
+            )
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val res = cloud.resetPasswordByRecovery(cleanUser, cleanCode, newPassword)
+                _uiState.update {
+                    it.copy(
+                        recoveryResetLoading = false,
+                        recoveryResetError = "",
+                        recoveryResetSuccessCode = res.newRecoveryCode
+                    )
+                }
+            } catch (e: CloudApiException) {
+                _uiState.update { it.copy(recoveryResetLoading = false, recoveryResetError = e.message) }
+            } catch (_: Exception) {
+                _uiState.update {
+                    it.copy(recoveryResetLoading = false, recoveryResetError = "重置失败，请检查网络后重试")
+                }
+            }
+        }
+    }
+
+    fun clearSecurityOpError() {
+        _uiState.update { it.copy(securityOpError = "") }
+    }
+
+    fun changeAccountPassword(currentPassword: String, newPassword: String, onSuccess: () -> Unit) {
+        val session = repo.loadAuthSession() ?: return
+        if (currentPassword.isBlank()) {
+            _uiState.update { it.copy(securityOpError = "请输入当前登录密码") }
+            return
+        }
+        if (newPassword.length < 6) {
+            _uiState.update { it.copy(securityOpError = "新密码至少 6 位") }
+            return
+        }
+        _uiState.update { it.copy(securityOpLoading = true, securityOpError = "") }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val newToken = cloud.changePassword(session.token, currentPassword, newPassword)
+                repo.saveAuthSession(session.copy(token = newToken))
+                _uiState.update {
+                    it.copy(
+                        securityOpLoading = false,
+                        securityOpError = "",
+                        parentNotice = "登录密码已修改，其他设备需使用新密码重新登录。"
+                    )
+                }
+                withContext(Dispatchers.Main) { onSuccess() }
+            } catch (e: CloudApiException) {
+                _uiState.update { it.copy(securityOpLoading = false, securityOpError = e.message) }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(securityOpLoading = false, securityOpError = "修改失败，请检查网络") }
+            }
+        }
+    }
+
+    fun rotateRecoveryCode(currentPassword: String, onSuccess: () -> Unit) {
+        val session = repo.loadAuthSession() ?: return
+        if (currentPassword.isBlank()) {
+            _uiState.update { it.copy(securityOpError = "请输入当前登录密码确认") }
+            return
+        }
+        _uiState.update { it.copy(securityOpLoading = true, securityOpError = "") }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val newCode = cloud.rotateRecoveryCode(session.token, currentPassword)
+                _uiState.update {
+                    it.copy(
+                        securityOpLoading = false,
+                        securityOpError = "",
+                        pendingRecoveryCodeDialog = newCode
+                    )
+                }
+                withContext(Dispatchers.Main) { onSuccess() }
+            } catch (e: CloudApiException) {
+                _uiState.update { it.copy(securityOpLoading = false, securityOpError = e.message) }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(securityOpLoading = false, securityOpError = "生成失败，请检查网络") }
             }
         }
     }

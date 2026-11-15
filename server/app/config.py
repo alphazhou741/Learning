@@ -20,3 +20,11 @@ def get_jwt_expire_days() -> int:
         return max(1, int(os.getenv("JWT_EXPIRE_DAYS", "90")))
     except ValueError:
         return 90
+
+
+def get_admin_username() -> str:
+    return (os.getenv("ADMIN_USERNAME", "admin") or "admin").strip() or "admin"
+
+
+def get_admin_password() -> str:
+    return os.getenv("ADMIN_PASSWORD", "").strip()

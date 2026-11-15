@@ -27,7 +27,13 @@ class CloudApiException(
 data class AuthApiResult(
     val token: String,
     val user: UserDto,
-    val children: List<ChildSummary>
+    val children: List<ChildSummary>,
+    val recoveryCode: String? = null
+)
+
+data class ResetByRecoveryResult(
+    val message: String,
+    val newRecoveryCode: String
 )
 
 data class MeApiResult(
@@ -85,6 +91,44 @@ class CloudApiClient(
         }
         val json = executeJson("POST", "/api/v1/auth/login", body = body)
         return parseAuthResult(json)
+    }
+
+    fun resetPasswordByRecovery(
+        username: String,
+        recoveryCode: String,
+        newPassword: String
+    ): ResetByRecoveryResult {
+        val body = JSONObject().apply {
+            put("username", username)
+            put("recoveryCode", recoveryCode)
+            put("newPassword", newPassword)
+        }
+        val json = executeJson("POST", "/api/v1/auth/reset-by-recovery", body = body)
+        return ResetByRecoveryResult(
+            message = json.optString("message", "密码已重置"),
+            newRecoveryCode = json.getString("newRecoveryCode")
+        )
+    }
+
+    fun changePassword(
+        token: String,
+        currentPassword: String,
+        newPassword: String
+    ): String {
+        val body = JSONObject().apply {
+            put("currentPassword", currentPassword)
+            put("newPassword", newPassword)
+        }
+        val json = executeJson("POST", "/api/v1/auth/change-password", token = token, body = body)
+        return json.getString("token")
+    }
+
+    fun rotateRecoveryCode(token: String, currentPassword: String): String {
+        val body = JSONObject().apply {
+            put("currentPassword", currentPassword)
+        }
+        val json = executeJson("POST", "/api/v1/auth/rotate-recovery-code", token = token, body = body)
+        return json.getString("recoveryCode")
     }
 
     fun me(token: String): MeApiResult {
@@ -231,7 +275,8 @@ class CloudApiClient(
     private fun parseAuthResult(json: JSONObject): AuthApiResult = AuthApiResult(
         token = json.getString("token"),
         user = parseUser(json.getJSONObject("user")),
-        children = parseChildren(json.getJSONArray("children"))
+        children = parseChildren(json.getJSONArray("children")),
+        recoveryCode = json.optString("recoveryCode", "").takeIf { it.isNotBlank() && it != "null" }
     )
 
     private fun parseUser(json: JSONObject): UserDto = UserDto(

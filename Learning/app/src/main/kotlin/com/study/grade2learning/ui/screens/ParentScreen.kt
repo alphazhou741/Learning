@@ -67,6 +67,9 @@ fun ParentScreen(
     onUpdateEnglishAudioMode: (EnglishAudioMode) -> Unit,
     onUpdateSpeechRate: (Float) -> Unit,
     onExportBackup: () -> Unit,
+    onChangePassword: (currentPassword: String, newPassword: String, onSuccess: () -> Unit) -> Unit,
+    onRotateRecoveryCode: (currentPassword: String, onSuccess: () -> Unit) -> Unit,
+    onClearSecurityError: () -> Unit,
     onResetAllData: (accountPassword: String, onSuccess: () -> Unit) -> Unit,
     onClearResetError: () -> Unit,
     onSyncNow: () -> Unit,
@@ -88,6 +91,10 @@ fun ParentScreen(
     val bundle = state.bundle
     var showResetConfirmDialog by remember { mutableStateOf(false) }
     var resetPassword by remember { mutableStateOf("") }
+    var showChangePwdDialog by remember { mutableStateOf(false) }
+    var showRotateRecDialog by remember { mutableStateOf(false) }
+    var curPwdInput by remember { mutableStateOf("") }
+    var newPwdInput by remember { mutableStateOf("") }
 
     Column(modifier = Modifier.fillMaxSize()) {
         UnifiedTopBar(
@@ -575,6 +582,75 @@ fun ParentScreen(
                         }
                     }
                 }
+
+                // 3. Account Security & Recovery Code Card
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(AppColors.CardSurface)
+                        .border(1.dp, AppColors.BorderWarm, RoundedCornerShape(18.dp))
+                        .padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "3. 账号密码与恢复码安全",
+                        color = AppColors.TextPrimary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Text(
+                        text = "若遗忘旧恢复码或需要修改登录密码，可在此验证当前密码后更新（修改密码后旧设备需重新登录）。",
+                        color = AppColors.TextSecondary,
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(40.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(AppColors.MathBadgeBg)
+                                .border(1.dp, AppColors.MathBorder, RoundedCornerShape(12.dp))
+                                .clickable {
+                                    curPwdInput = ""
+                                    newPwdInput = ""
+                                    onClearSecurityError()
+                                    showChangePwdDialog = true
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "修改登录密码",
+                                color = AppColors.MathTextDark,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(40.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(AppColors.ZhBadgeBg)
+                                .border(1.dp, AppColors.ZhBorder, RoundedCornerShape(12.dp))
+                                .clickable {
+                                    curPwdInput = ""
+                                    onClearSecurityError()
+                                    showRotateRecDialog = true
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "重新生成恢复码",
+                                color = AppColors.ZhTextDark,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -726,6 +802,224 @@ fun ParentScreen(
                 }
             }
         }
+    }
+
+    if (showChangePwdDialog) {
+        Dialog(onDismissRequest = {
+            if (!state.securityOpLoading) {
+                showChangePwdDialog = false
+                onClearSecurityError()
+            }
+        }) {
+            Column(
+                modifier = Modifier
+                    .width(420.dp)
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(AppColors.CardSurface)
+                    .border(1.dp, AppColors.BorderWarm, RoundedCornerShape(22.dp))
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "修改账号登录密码",
+                    color = AppColors.TextPrimary,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                ParentPwdInputBox(
+                    value = curPwdInput,
+                    placeholder = "请输入当前登录密码",
+                    onValueChange = {
+                        curPwdInput = it
+                        onClearSecurityError()
+                    }
+                )
+                ParentPwdInputBox(
+                    value = newPwdInput,
+                    placeholder = "请输入新密码（至少 6 位）",
+                    onValueChange = {
+                        newPwdInput = it
+                        onClearSecurityError()
+                    }
+                )
+                if (state.securityOpError.isNotBlank()) {
+                    Text(
+                        text = state.securityOpError,
+                        color = AppColors.WeakTextDark,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .height(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(AppColors.PillMutedBg)
+                            .clickable(enabled = !state.securityOpLoading) {
+                                showChangePwdDialog = false
+                                onClearSecurityError()
+                            }
+                            .padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = "取消", color = AppColors.TextSecondary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .height(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(AppColors.MathPrimary)
+                            .clickable(enabled = !state.securityOpLoading) {
+                                onChangePassword(curPwdInput, newPwdInput) {
+                                    showChangePwdDialog = false
+                                    curPwdInput = ""
+                                    newPwdInput = ""
+                                }
+                            }
+                            .padding(horizontal = 18.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (state.securityOpLoading) "保存中..." else "确认修改",
+                            color = AppColors.TextOnAccent,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showRotateRecDialog) {
+        Dialog(onDismissRequest = {
+            if (!state.securityOpLoading) {
+                showRotateRecDialog = false
+                onClearSecurityError()
+            }
+        }) {
+            Column(
+                modifier = Modifier
+                    .width(420.dp)
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(AppColors.CardSurface)
+                    .border(1.dp, AppColors.BorderWarm, RoundedCornerShape(22.dp))
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "重新生成账号恢复码",
+                    color = AppColors.TextPrimary,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Text(
+                    text = "重新生成后，旧的恢复码将立即作废。请输入登录密码确认：",
+                    color = AppColors.TextSecondary,
+                    fontSize = 12.sp
+                )
+                ParentPwdInputBox(
+                    value = curPwdInput,
+                    placeholder = "请输入当前登录密码",
+                    onValueChange = {
+                        curPwdInput = it
+                        onClearSecurityError()
+                    }
+                )
+                if (state.securityOpError.isNotBlank()) {
+                    Text(
+                        text = state.securityOpError,
+                        color = AppColors.WeakTextDark,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .height(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(AppColors.PillMutedBg)
+                            .clickable(enabled = !state.securityOpLoading) {
+                                showRotateRecDialog = false
+                                onClearSecurityError()
+                            }
+                            .padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = "取消", color = AppColors.TextSecondary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .height(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(AppColors.ZhPrimary)
+                            .clickable(enabled = !state.securityOpLoading) {
+                                onRotateRecoveryCode(curPwdInput) {
+                                    showRotateRecDialog = false
+                                    curPwdInput = ""
+                                }
+                            }
+                            .padding(horizontal = 18.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (state.securityOpLoading) "生成中..." else "生成新恢复码",
+                            color = AppColors.TextOnAccent,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ParentPwdInputBox(
+    value: String,
+    placeholder: String,
+    onValueChange: (String) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(44.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(AppColors.PaperBg)
+            .border(1.dp, AppColors.DividerStrong, RoundedCornerShape(12.dp))
+            .padding(horizontal = 14.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        if (value.isEmpty()) {
+            Text(text = placeholder, color = AppColors.TextSubtle, fontSize = 13.sp)
+        }
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Password,
+                autoCorrectEnabled = false,
+                imeAction = ImeAction.Done
+            ),
+            visualTransformation = PasswordVisualTransformation(),
+            textStyle = TextStyle(
+                color = AppColors.TextPrimary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold
+            ),
+            cursorBrush = SolidColor(AppColors.MathPrimary),
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 

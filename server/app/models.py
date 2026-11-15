@@ -10,12 +10,29 @@ class User(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     username: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_disabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    token_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    recovery_code_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    recovery_code_updated_at_ms: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     created_at_ms: Mapped[int] = mapped_column(BigInteger, nullable=False)
 
     children: Mapped[list["ChildProfile"]] = relationship(
         back_populates="owner",
         cascade="all, delete-orphan",
     )
+
+
+class AdminAuditLog(Base):
+    __tablename__ = "admin_audit_logs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    actor_username: Mapped[str] = mapped_column(String(64), nullable=False)
+    action: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    target_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    target_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at_ms: Mapped[int] = mapped_column(BigInteger, index=True, nullable=False)
 
 
 class ChildProfile(Base):
