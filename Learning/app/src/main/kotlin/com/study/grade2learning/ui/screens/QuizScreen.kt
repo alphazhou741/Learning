@@ -63,6 +63,7 @@ fun QuizScreen(
     currentTopic: TopicNode?,
     onExitQuiz: () -> Unit,
     onSelectChoice: (String) -> Unit,
+    onConfirmChoice: () -> Unit,
     onPressKeypad: (String) -> Unit,
     onSkip: () -> Unit,
     onNextStep: () -> Unit,
@@ -265,11 +266,28 @@ fun QuizScreen(
                                             AppColors.WeakPrimary,
                                             AppColors.WeakTextDark
                                         )
+                                        outcome == null && isPicked -> listOf(
+                                            AppColors.MathBadgeBg,
+                                            AppColors.MathPrimary,
+                                            AppColors.MathTextDark
+                                        )
                                         else -> listOf(
                                             AppColors.CardSurface,
                                             AppColors.BorderWarm,
                                             AppColors.TextPrimary
                                         )
+                                    }
+                                    val badgeBg = when {
+                                        outcome == null && isPicked -> AppColors.MathPrimary
+                                        outcome != null && isRightAns -> AppColors.MasteredDot
+                                        outcome != null && isPicked && !outcome.isCorrect -> AppColors.WeakPrimary
+                                        else -> AppColors.SelectedChipBg
+                                    }
+                                    val badgeTextColor = when {
+                                        (outcome == null && isPicked) ||
+                                            (outcome != null && (isRightAns || (isPicked && !outcome.isCorrect))) ->
+                                            AppColors.TextOnAccent
+                                        else -> AppColors.TextSecondary
                                     }
 
                                     Row(
@@ -278,7 +296,11 @@ fun QuizScreen(
                                             .heightIn(min = 64.dp)
                                             .clip(RoundedCornerShape(16.dp))
                                             .background(bg)
-                                            .border(1.5.dp, border, RoundedCornerShape(16.dp))
+                                            .border(
+                                                if (outcome == null && isPicked) 2.dp else 1.5.dp,
+                                                border,
+                                                RoundedCornerShape(16.dp)
+                                            )
                                             .clickable(enabled = outcome == null) {
                                                 onSelectChoice(choice.key)
                                             }
@@ -290,12 +312,12 @@ fun QuizScreen(
                                             modifier = Modifier
                                                 .size(34.dp)
                                                 .clip(RoundedCornerShape(10.dp))
-                                                .background(AppColors.SelectedChipBg),
+                                                .background(badgeBg),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Text(
                                                 text = choice.key,
-                                                color = AppColors.TextSecondary,
+                                                color = badgeTextColor,
                                                 fontSize = 14.sp,
                                                 fontWeight = FontWeight.ExtraBold
                                             )
@@ -491,43 +513,93 @@ fun QuizScreen(
                         }
                     }
                 } else {
+                    val isChoiceQuestion = q.type == "choice" && q.choices.isNotEmpty()
+                    val selectedKey = state.selectedChoiceKey
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = when (q.subject) {
-                                SubjectKey.MATH -> "可用右侧竖式草稿纸演算后点击数字填写"
-                                SubjectKey.CHINESE -> "仔细阅读短文后选择正确选项"
-                                SubjectKey.ENGLISH -> "可点击上方或题干旁的英文点读听标准发音"
+                            text = when {
+                                isChoiceQuestion && selectedKey != null ->
+                                    "已选 $selectedKey 项，可点其他选项修改或再次点击取消，确认无误后提交"
+                                isChoiceQuestion ->
+                                    "先点击选择一个答案，再点击右侧「确认提交」按钮"
+                                q.subject == SubjectKey.MATH ->
+                                    "可用右侧竖式草稿纸演算后点击数字填写"
+                                q.subject == SubjectKey.CHINESE ->
+                                    "仔细阅读短文后选择正确选项"
+                                else ->
+                                    "可点击上方或题干旁的英文点读听标准发音"
                             },
-                            color = AppColors.TextMuted,
-                            fontSize = 12.sp
+                            color = if (isChoiceQuestion && selectedKey != null) AppColors.MathTextDark else AppColors.TextMuted,
+                            fontSize = 12.sp,
+                            fontWeight = if (isChoiceQuestion && selectedKey != null) FontWeight.SemiBold else FontWeight.Normal,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 12.dp)
                         )
 
                         Row(
-                            modifier = Modifier
-                                .height(36.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(AppColors.SelectedChipBg)
-                                .clickable(onClick = onSkip)
-                                .padding(horizontal = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = AppIcons.Bulb,
-                                contentDescription = null,
-                                tint = AppColors.TextSecondary,
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Text(
-                                text = "不会，跳过",
-                                color = AppColors.TextSecondary,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Row(
+                                modifier = Modifier
+                                    .height(38.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(AppColors.SelectedChipBg)
+                                    .clickable(onClick = onSkip)
+                                    .padding(horizontal = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = AppIcons.Bulb,
+                                    contentDescription = null,
+                                    tint = AppColors.TextSecondary,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Text(
+                                    text = "不会，跳过",
+                                    color = AppColors.TextSecondary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            if (isChoiceQuestion) {
+                                val canSubmit = selectedKey != null
+                                Row(
+                                    modifier = Modifier
+                                        .height(38.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(if (canSubmit) AppColors.MathPrimary else AppColors.PillMutedBg)
+                                        .border(
+                                            1.dp,
+                                            if (canSubmit) AppColors.MathPrimary else AppColors.BorderWarm,
+                                            RoundedCornerShape(12.dp)
+                                        )
+                                        .clickable(enabled = canSubmit, onClick = onConfirmChoice)
+                                        .padding(horizontal = 18.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = AppIcons.CheckCircle,
+                                        contentDescription = null,
+                                        tint = if (canSubmit) AppColors.TextOnAccent else AppColors.TextSubtle,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                    Text(
+                                        text = if (canSubmit) "确认提交 ($selectedKey)" else "请先选择选项",
+                                        color = if (canSubmit) AppColors.TextOnAccent else AppColors.TextSubtle,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+                                }
+                            }
                         }
                     }
                 }

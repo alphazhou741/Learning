@@ -652,11 +652,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    fun selectChoiceAndSubmit(choiceKey: String) {
+    fun selectChoice(choiceKey: String) {
         val st = _uiState.value
         if (st.answerOutcome != null) return
-        val q = st.currentQuestion ?: return
-        submitRawAnswer(choiceKey, selectedChoice = choiceKey)
+        _uiState.update {
+            it.copy(
+                selectedChoiceKey = if (it.selectedChoiceKey == choiceKey) null else choiceKey
+            )
+        }
+    }
+
+    fun submitSelectedChoice() {
+        val st = _uiState.value
+        if (st.answerOutcome != null) return
+        val selected = st.selectedChoiceKey ?: return
+        if (st.currentQuestion == null) return
+        submitRawAnswer(selected, selectedChoice = selected)
     }
 
     fun pressKeypadKey(key: String) {
