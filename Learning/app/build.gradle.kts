@@ -40,8 +40,8 @@ android {
     applicationId = "com.study.grade2learning"
     minSdk = 35
     targetSdk = 36
-    versionCode = providers.gradleProperty("appVersionCode").orNull?.toIntOrNull() ?: 2
-    versionName = providers.gradleProperty("appVersionName").orNull ?: "1.1.0"
+    versionCode = providers.gradleProperty("appVersionCode").orNull?.toIntOrNull() ?: 3
+    versionName = providers.gradleProperty("appVersionName").orNull ?: "1.2.0"
     buildConfigField("String", "API_BASE_URL", "\"https://study.19930216.xyz\"")
   }
 

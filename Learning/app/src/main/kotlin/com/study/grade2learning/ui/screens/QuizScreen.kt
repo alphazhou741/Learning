@@ -401,6 +401,15 @@ fun QuizScreen(
                             )
                         }
 
+                        if (!outcome.isCorrect && q.type != "choice") {
+                            Text(
+                                text = "正确答案：${q.answer}",
+                                color = fbAccent,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
                         Text(
                             text = outcome.detail,
                             color = AppColors.TextSecondary,
@@ -630,6 +639,7 @@ fun QuizScreen(
                     KnowledgeCriteriaRightCard(
                         question = q,
                         topic = currentTopic,
+                        gradeLabel = state.profile.grade,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -683,22 +693,46 @@ private fun MathScratchpadCard(
                     fontWeight = FontWeight.Bold
                 )
             }
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFFEAE6DB))
-                    .clickable {
-                        strokes.clear()
-                        activeStroke = emptyList()
-                    }
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "清空",
-                    color = AppColors.TextSecondary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                val canUndo = strokes.isNotEmpty()
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (canUndo) Color(0xFFEAE6DB) else Color(0xFFF1EEE6))
+                        .clickable(enabled = canUndo) {
+                            if (strokes.isNotEmpty()) {
+                                strokes.removeAt(strokes.lastIndex)
+                            }
+                        }
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "撤销",
+                        color = if (canUndo) AppColors.TextSecondary else AppColors.TextSubtle,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFEAE6DB))
+                        .clickable {
+                            strokes.clear()
+                            activeStroke = emptyList()
+                        }
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "清空",
+                        color = AppColors.TextSecondary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
 
@@ -850,6 +884,7 @@ private fun NumericKeypadGrid(
 private fun KnowledgeCriteriaRightCard(
     question: QuestionItem,
     topic: TopicNode?,
+    gradeLabel: String,
     modifier: Modifier = Modifier
 ) {
     val isEnglish = question.subject == SubjectKey.ENGLISH
@@ -942,7 +977,7 @@ private fun KnowledgeCriteriaRightCard(
                     text = if (isEnglish) {
                         "英语模块内置 382 段预置离线发音音频，并配备系统 Android TTS 兜底，无网络也能听标准发音。"
                     } else {
-                        "语文题目不配语音读题，鼓励二年级孩子自主识字并从短文中直接找出关键信息。"
+                        "语文题目不配语音读题，鼓励${gradeLabel.ifBlank { "当前年级" }}孩子自主识字并从短文中直接找出关键信息。"
                     },
                     color = AppColors.TextSecondary,
                     fontSize = 12.sp,

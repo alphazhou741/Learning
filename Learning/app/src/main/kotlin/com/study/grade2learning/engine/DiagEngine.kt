@@ -2,6 +2,7 @@ package com.study.grade2learning.engine
 
 import com.study.grade2learning.model.DependencyEdge
 import com.study.grade2learning.model.NodeStatus
+import com.study.grade2learning.model.QuestionChoice
 import com.study.grade2learning.model.QuestionItem
 import com.study.grade2learning.model.RemediationStep
 import com.study.grade2learning.model.SubjectDataset
@@ -60,11 +61,34 @@ class DiagEngine(private val dataset: SubjectDataset) {
         val rec = records[topicId] ?: TopicRecord()
         val unasked = pool.filter { it.id !in excludeQuestionIds && it.id != rec.lastQuestionId }
         val candidates = unasked.ifEmpty { pool.filter { it.id != rec.lastQuestionId }.ifEmpty { pool } }
-        return if (rec.status == NodeStatus.WEAK || rec.wrongCount > 0) {
-            candidates.firstOrNull { it.difficulty == "basic" } ?: candidates.first()
+        val picked = if (rec.status == NodeStatus.WEAK || rec.wrongCount > 0) {
+            candidates.filter { it.difficulty == "basic" }.ifEmpty { candidates }.random()
         } else {
-            candidates.first()
+            candidates.random()
         }
+        return shuffleChoiceOptions(picked)
+    }
+
+    private fun shuffleChoiceOptions(q: QuestionItem): QuestionItem {
+        if (q.type != "choice" || q.choices.size < 2) return q
+        val targetKey = q.answer.trim()
+        val originalRight = q.choices.firstOrNull { it.key.equals(targetKey, ignoreCase = true) } ?: return q
+        val shuffledChoices = q.choices.shuffled()
+        var newAnswerKey = q.answer
+        val remapped = q.choices.mapIndexed { idx, canonicalSlot ->
+            val pickedOption = shuffledChoices[idx]
+            if (pickedOption === originalRight) {
+                newAnswerKey = canonicalSlot.key
+            }
+            QuestionChoice(
+                key = canonicalSlot.key,
+                text = pickedOption.text
+            )
+        }
+        return q.copy(
+            choices = remapped,
+            answer = newAnswerKey
+        )
     }
 
     fun judgeAnswer(question: QuestionItem, rawInput: String): Boolean {
@@ -72,6 +96,12 @@ class DiagEngine(private val dataset: SubjectDataset) {
         if (cleaned.isEmpty()) return false
         if (question.type == "choice") {
             return cleaned.equals(question.answer.trim(), ignoreCase = true)
+        }
+        if (question.answer.contains('，') || question.answer.contains(',')) {
+            return judgeCommaSeparatedAnswer(expectedRaw = question.answer, actualRaw = cleaned)
+        }
+        if (cleaned.contains('，') || cleaned.contains(',')) {
+            return false
         }
         val expectedNum = parseNumericValue(question.answer)
         val actualNum = parseNumericValue(cleaned)
@@ -155,7 +185,7 @@ class DiagEngine(private val dataset: SubjectDataset) {
             )
         } else {
             val nextWrong = prev.wrongCount + 1
-            val nextStatus = if (prev.consecutiveCorrect > 0 && nextWrong == 1 && !isSkipped) {
+            val nextStatus = if ((prev.status == NodeStatus.MASTERED || prev.consecutiveCorrect > 0) && !isSkipped) {
                 NodeStatus.SHAKY
             } else {
                 NodeStatus.WEAK
@@ -269,9 +299,30 @@ class DiagEngine(private val dataset: SubjectDataset) {
     }
 
     companion object {
+        private val COMMA_SPLIT_REGEX = Regex("[,，]+")
+
+        private fun judgeCommaSeparatedAnswer(expectedRaw: String, actualRaw: String): Boolean {
+            val expectedParts = expectedRaw.split(COMMA_SPLIT_REGEX).map { it.trim() }.filter { it.isNotEmpty() }
+            val actualParts = actualRaw.split(COMMA_SPLIT_REGEX).map { it.trim() }.filter { it.isNotEmpty() }
+            if (expectedParts.size < 2 || expectedParts.size != actualParts.size) {
+                return false
+            }
+            for (i in expectedParts.indices) {
+                val expNum = parseNumericValue(expectedParts[i])
+                val actNum = parseNumericValue(actualParts[i])
+                val partMatch = if (expNum != null && actNum != null) {
+                    abs(expNum - actNum) < 1e-6
+                } else {
+                    normalizeText(expectedParts[i]) == normalizeText(actualParts[i])
+                }
+                if (!partMatch) return false
+            }
+            return true
+        }
+
         fun parseNumericValue(raw: String): Double? {
-            val s = raw.trim().replace("，", ".").replace(" ", "")
-            if (s.isEmpty()) return null
+            val s = raw.trim().replace(" ", "")
+            if (s.isEmpty() || s.contains('，') || s.contains(',')) return null
             if ('/' in s) {
                 val parts = s.split('/')
                 if (parts.size == 2) {
