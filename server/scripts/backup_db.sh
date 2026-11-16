@@ -59,10 +59,10 @@ if [ -n "${TG_BOT_TOKEN:-}" ] && [ -n "${TG_CHAT_ID:-}" ]; then
 EOF
 )
   TG_RESP="$(curl -sS --max-time 60 \
-    -F "chat_id=${TG_CHAT_ID}" \
-    -F "parse_mode=HTML" \
+    --form-string "chat_id=${TG_CHAT_ID}" \
+    --form-string "parse_mode=HTML" \
     -F "document=@${FINAL_FILE}" \
-    -F "caption=${CAPTION}" \
+    --form-string "caption=${CAPTION}" \
     "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendDocument" 2>&1)" || {
       echo "[ERROR] Telegram upload curl failed (local backup preserved at $FINAL_FILE)" >&2
       exit 1
