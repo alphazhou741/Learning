@@ -45,10 +45,22 @@ SHA256_SUM="$(sha256sum "$FINAL_FILE" 2>/dev/null | awk '{print $1}' || shasum -
 echo "[OK] Backup saved: $FINAL_FILE (${FILE_SIZE} bytes, sha256=${SHA256_SUM})"
 
 if [ -n "${TG_BOT_TOKEN:-}" ] && [ -n "${TG_CHAT_ID:-}" ]; then
-  CAPTION=$(printf "基础学习 PostgreSQL 每日备份\n时间：%s\n文件：%s\n大小：%s bytes\nSHA256：%s" \
-    "$READABLE_TIME" "$(basename "$FINAL_FILE")" "$FILE_SIZE" "$SHA256_SUM")
+  FILE_NAME="$(basename "$FINAL_FILE")"
+  CAPTION=$(cat <<EOF
+<b>基础学习 PostgreSQL 每日备份</b>
+
+<b>时间：</b><code>${READABLE_TIME}</code>
+<b>文件：</b><code>${FILE_NAME}</code>
+<b>大小：</b><code>${FILE_SIZE} bytes</code>
+<b>SHA256：</b><code>${SHA256_SUM}</code>
+
+<b>空库恢复命令（点击可复制）：</b>
+<pre><code>gunzip -c ${FILE_NAME} | docker exec -i study_postgres psql -h 127.0.0.1 -p 5433 -U study -d study_learning</code></pre>
+EOF
+)
   TG_RESP="$(curl -sS --max-time 60 \
     -F "chat_id=${TG_CHAT_ID}" \
+    -F "parse_mode=HTML" \
     -F "document=@${FINAL_FILE}" \
     -F "caption=${CAPTION}" \
     "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendDocument" 2>&1)" || {
